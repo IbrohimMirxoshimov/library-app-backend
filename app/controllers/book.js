@@ -1,9 +1,7 @@
 const { Book } = require("../database/models");
 const Stock = require("../database/models/Stock");
-const {
-	CheckSimilartyNewData,
-	BadRequestExaption,
-} = require("../helpers/CheckSimilartyNewData");
+const { CheckSimilartyNewData } = require("../helpers/CheckSimilartyNewData");
+const { BadRequestExaption } = require("../helpers/HttpExaptions");
 
 const BookController = {
 	add: () => async (req, res, next) => {
