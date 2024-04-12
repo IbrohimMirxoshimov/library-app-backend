@@ -5,6 +5,7 @@ const ONE_DAY_IN_MS = 1000 * 60 * 60 * 24;
 const ONE_MILLIMETER_IN_PIXEL = 3.7795275591;
 
 module.exports = {
+	ESKIZ_WEBHOOK_ROUTE: "/eskiz",
 	NO_IMAGE_URL,
 	NO_IMAGE_TGID,
 	ONE_DAY_IN_MS,

@@ -6,6 +6,7 @@ const auth = require("../api/routes/auth");
 const config = require("../config");
 const path = require("path");
 const { isCelebrateError } = require("celebrate");
+const webhook = require("../api/routes/webhook");
 
 module.exports = (app) => {
 	// statics
@@ -26,6 +27,7 @@ module.exports = (app) => {
 	// Load API routes
 	app.use(config.api.prefix, routes());
 	app.use(config.auth.prefix, auth());
+	app.use(config.WEBHOOK_PREFIX, webhook());
 
 	app.get("*", (req, res, next) => {
 		if (req.accepts("text/html")) {

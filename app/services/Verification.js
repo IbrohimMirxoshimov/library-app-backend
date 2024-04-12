@@ -1,6 +1,8 @@
 const { production } = require("../config");
 const { Sms } = require("../database/models");
-const { sendSMSViaPlayMobile } = require("./SmsService");
+const { SmsProviderType } = require("../database/models/Sms");
+const { SmsTemplates, sendSmsViaEskiz } = require("../helpers/SmsProviderApi");
+
 const EXPIRE_TIME_CODE = 1000 * 60 * 5;
 const sendedCodes = {};
 
@@ -8,21 +10,34 @@ function clearCode(phone_number) {
 	delete sendedCodes[phone_number];
 }
 
+function generateSmsCode() {
+	return production ? String(Math.floor(Math.random() * 10000)) : 1111;
+}
+
 function generateAndSaveCode(phone_number) {
-	const code = production ? String(Math.floor(Math.random() * 10000)) : 1111;
-	sendedCodes[phone_number] = code;
+	sendedCodes[phone_number] = generateSmsCode();
+
 	setTimeout(() => clearCode(phone_number), EXPIRE_TIME_CODE);
 }
 
 const Verification = {
 	async sendCode(phone_number, userId) {
-		const text = `Mehr kutubxonasi\nTasdiqlash kodi: ${generateAndSaveCode(
-			phone_number
-		)}`;
-		const sms = await Sms.create({ text, phone: phone_number, userId: userId });
+		const text = SmsTemplates.verificationCode.getText(
+			generateAndSaveCode(phone_number)
+		);
 
-		await sendSMSViaPlayMobile(phone_number, text, sms.id);
-		return sms.toJSON();
+		const { message_id } = await sendSmsViaEskiz({
+			phone_number: phone_number,
+			text: text,
+		});
+
+		await Sms.create({
+			text,
+			phone: phone_number,
+			userId: userId,
+			provider: SmsProviderType.eskiz,
+			provider_message_id: message_id,
+		});
 	},
 	verifyCode(phone_number, code) {
 		if (sendedCodes[phone_number] === code) {

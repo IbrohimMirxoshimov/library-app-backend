@@ -38,12 +38,6 @@ Scene.enter(async (ctx) => {
 	const keyboard = Markup.inlineKeyboard([
 		[Markup.button.switchToCurrentChat("📘 O'qigan kitoblarim", "my_books_1")],
 		[Markup.button.switchToCurrentChat("📖 O'qiyapman", "my_books_0")],
-		// [
-		// 	Markup.button.url(
-		// 		"📖 Shtrix kod",
-		// 		"http://library.softly.uz/barcode?barcode=U" + idToBarcode(user.id)
-		// 	),
-		// ],
 		[backButton()],
 	]);
 
