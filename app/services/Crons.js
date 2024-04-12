@@ -214,11 +214,7 @@ const Crons = {
 	async rentExpiresBulkSms() {
 		try {
 			const locationId = 1;
-			const { rows } = await RentServices.report(locationId, {
-				userWhereOptions: {
-					phone: "998843566",
-				},
-			});
+			const { rows } = await RentServices.report(locationId);
 
 			const rents_uniq_by_phone = Object.values(
 				rows.reduce((pv, cv) => ({ ...pv, [cv.user.phone]: cv }), {})
