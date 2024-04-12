@@ -221,12 +221,12 @@ const Crons = {
 			});
 
 			const rents_uniq_by_phone = Object.values(
-				rows
-					.slice(0, 1)
-					.reduce((pv, cv) => ({ ...pv, [cv.user.phone]: cv }), {})
+				rows.reduce((pv, cv) => ({ ...pv, [cv.user.phone]: cv }), {})
 			);
 
 			if (rents_uniq_by_phone.length === 0) return;
+			console.log(rents_uniq_by_phone.length);
+			return;
 
 			const [librarian] = await User.findAll({
 				where: {
