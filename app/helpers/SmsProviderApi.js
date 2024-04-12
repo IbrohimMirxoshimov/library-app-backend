@@ -6,6 +6,7 @@ const {
 	ESKIZ_PASSWORD,
 	WEBHOOK_PREFIX,
 	APP_ORIGIN,
+	production,
 } = require("../config");
 const { generateRandomString } = require("../utils/string");
 const { ESKIZ_WEBHOOK_ROUTE } = require("../constants/mix");
@@ -19,7 +20,9 @@ exports.SmsTemplates = {
 	rentExpiredWithCustomLink: {
 		id: 10183,
 		getText: (fullName, phone_number) =>
-			`${fullName} ijraga olgan kitobingiz vaqtidan kechikibdi\nKechiktirishingiz kutubxonaga katta zarar\n\nHavolaga kiring!\nmehrkutubxonasi.uz/s/${phone_number}`,
+			`${clearText(
+				fullName
+			)} ijraga olgan kitobingiz vaqtidan kechikibdi\nKechiktirishingiz kutubxonaga katta zarar\n\nHavolaga kiring!\nmehrkutubxonasi.uz/s/${phone_number}`,
 	},
 	forExtraPhone: {
 		id: 9912,
@@ -51,24 +54,60 @@ async function getEskizAuthToken() {
 	return eskizToken.token;
 }
 
+function clearText(text) {
+	const matched = text.match(/[A-Z '`‘]+$/i);
+
+	if (matched) {
+		return matched[0].replace(/`‘/g, "'");
+	} else {
+		const onlyABC = text.match(/[A-Z ]+$/i);
+		if (onlyABC) {
+			return matched[0];
+		}
+	}
+
+	throw new Error("Text clearing error: " + text);
+}
+function smsCharsLimit(text) {
+	if (text.length > 160) {
+		throw new Error("Sms char limit error");
+	}
+
+	return text;
+}
+
 exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 	phone_number,
 	text,
 	callback_url = APP_ORIGIN + WEBHOOK_PREFIX + ESKIZ_WEBHOOK_ROUTE,
 }) {
+	smsCharsLimit(text);
 	const token = await getEskizAuthToken();
-	const res = await axios.post(
-		`https://notify.eskiz.uz/api/message/sms/send`,
-		{
-			mobile_phone: phone_number,
-			message: text,
-			from: 4546,
-			callback_url,
-		},
-		{
-			headers: { Authorization: `Bearer ${token}` },
-		}
-	);
+
+	if (!production) {
+		return {
+			message_id: "res.data.id",
+		};
+	}
+
+	const res = await axios
+		.post(
+			`https://notify.eskiz.uz/api/message/sms/send`,
+			{
+				mobile_phone: phone_number,
+				message: text,
+				from: 4546,
+				callback_url,
+			},
+			{
+				headers: { Authorization: `Bearer ${token}` },
+			}
+		)
+		.catch((e) => {
+			const ne = new Error();
+			ne.data = e.response.data;
+			throw ne;
+		});
 
 	return {
 		message_id: res.data.id,
@@ -90,6 +129,7 @@ exports.sendSMSViaPlayMobile = async function sendSMSViaPlayMobile({
 		throw new Error("Bad arguments");
 	}
 
+	smsCharsLimit(text);
 	// if (!production) return;
 	const message_id = generateRandomString(10);
 	await axios.post(

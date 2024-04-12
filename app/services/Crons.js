@@ -1,8 +1,12 @@
 const { Op } = require("sequelize");
-const { Stock, Book, Rent } = require("../database/models");
+const { Stock, Book, Rent, Sms, SmsBulk, User } = require("../database/models");
 const { MAIN_GROUP_CHAT_ID, MAIN_BOT_USERNAME } = require("../config");
 const Notifications = require("./Notifications");
 const StatServices = require("./StatServices");
+const RentServices = require("./RentServices");
+const { sendSmsViaEskiz, SmsTemplates } = require("../helpers/SmsProviderApi");
+const { SmsProviderType } = require("../constants/mix");
+const UserStatus = require("../constants/UserStatus");
 const CronJob = require("cron").CronJob;
 
 function getStatusEmoji(rent) {
@@ -206,6 +210,84 @@ const Crons = {
 			"Asia/Tashkent"
 		);
 		return job.start();
+	},
+	async rentExpiresBulkSms() {
+		try {
+			const locationId = 1;
+			const { rows } = await RentServices.report(locationId, {
+				userWhereOptions: {
+					phone: "998843566",
+				},
+			});
+
+			const rents_uniq_by_phone = Object.values(
+				rows
+					.slice(0, 1)
+					.reduce((pv, cv) => ({ ...pv, [cv.user.phone]: cv }), {})
+			);
+
+			if (rents_uniq_by_phone.length === 0) return;
+
+			const [librarian] = await User.findAll({
+				where: {
+					librarian: true,
+					libraryId: locationId,
+					status: UserStatus.active,
+				},
+				order: [["id", "ASC"]],
+				raw: true,
+			});
+
+			const smsbulk = await SmsBulk.create({
+				attributes: ["id"],
+				text: SmsTemplates.rentExpiredWithCustomLink.getText(
+					"Ahmedev Ahmad",
+					"000000000"
+				),
+				userId: librarian.id,
+			});
+
+			for (const rent of rents_uniq_by_phone) {
+				const text = SmsTemplates.rentExpiredWithCustomLink.getText(
+					`${rent.user.firstName} ${rent.user.lastName}`,
+					rent.user.phone
+				);
+
+				const res = await sendSmsViaEskiz({
+					phone_number: `998${rent.user.phone}`,
+					text: text,
+				}).catch((e) => {
+					console.error(e, rent.user.phone, text);
+				});
+
+				await Sms.create({
+					phone: rent.user.phone,
+					userId: librarian.id,
+					text,
+					provider: SmsProviderType.eskiz,
+					provider_message_id: res.message_id,
+					smsbulkId: smsbulk.id,
+					status: res ? "pending" : "error",
+				});
+			}
+		} catch (error) {
+			console.error("rentExpiresBulkSms error");
+			console.error(error);
+		}
+
+		// webhhok dan status kelsa statusni o'zgartirish
+		// api/app/expired-rents-by-phone route yasash
+	},
+	rentExpiresBulkSmsCron() {
+		const job = new CronJob(
+			// At 06:00 on Monday, Wednesday, and Saturday
+			"0 6 * * 1,3,6",
+			this.rentExpiresBulkSms,
+			null,
+			true,
+			"Asia/Tashkent"
+		);
+		job.start();
 	},
 	loadCrons() {
 		this.groupNotifications.startSendingRentLeaseAndReturnInfoEveryDaylyCron();
