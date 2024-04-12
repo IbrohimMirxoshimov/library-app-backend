@@ -279,6 +279,8 @@ const Crons = {
 		// api/app/expired-rents-by-phone route yasash
 	},
 	rentExpiresBulkSmsCron() {
+		// for test
+		Crons.rentExpiresBulkSms();
 		const job = new CronJob(
 			// At 06:00 on Monday, Wednesday, and Saturday
 			"0 6 * * 1,3,6",
@@ -296,6 +298,7 @@ const Crons = {
 		this.donationChannel.sendLastWeekStatsCron();
 		this.mainChannelNotifications.warningAboutRentExpires();
 		this.mainChannelNotifications.lastWeekStats();
+		this.rentExpiresBulkSmsCron();
 		this.superAdminNotifications();
 		StatServices.setCachingStatsCron();
 	},
