@@ -4,22 +4,25 @@ const { getOneDayBackDate } = require("../utils/date");
 
 const RentServices = {
 	report: (locationId = 1, filter = {}) => {
-		let bookOptions = {};
-
+		const bookOptions = {};
 		if (filter.bookId) {
 			bookOptions.where = {
 				id: filter.bookId,
 			};
 		}
 
-		let userOptions = {};
+		const userOptions = {};
 		if (filter.gender) {
 			userOptions.where = {
 				gender: filter.gender,
 			};
 		}
 
-		let options = {
+		if (filter.userWhereOptions) {
+			userOptions.where = filter.userWhereOptions;
+		}
+
+		return Rent.findAndCountAll({
 			include: [
 				{
 					model: Stock,
@@ -58,9 +61,7 @@ const RentServices = {
 				returningDate: { [Op.lt]: getOneDayBackDate(new Date(), 3) },
 			},
 			order: [["returningDate", "ASC"]],
-		};
-
-		return Rent.findAndCountAll(options);
+		});
 	},
 };
 
