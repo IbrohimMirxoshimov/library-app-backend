@@ -1,6 +1,6 @@
 const { production } = require("../config");
+const { SmsProviderType } = require("../constants/mix");
 const { Sms } = require("../database/models");
-const { SmsProviderType } = require("../database/models/Sms");
 const { SmsTemplates, sendSmsViaEskiz } = require("../helpers/SmsProviderApi");
 
 const EXPIRE_TIME_CODE = 1000 * 60 * 5;

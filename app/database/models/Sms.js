@@ -1,11 +1,6 @@
+const { SmsProviderType } = require("../../constants/mix");
 const sequelize = require("./sequelize");
 const { DataTypes } = require("sequelize");
-const SmsProviderType = {
-	play_mobile: 1,
-	eskiz: 2,
-	manual: 3,
-};
-exports.SmsProviderType = SmsProviderType;
 
 const Sms = sequelize.define(
 	"sms",
