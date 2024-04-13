@@ -282,7 +282,7 @@ const Crons = {
 	},
 	rentExpiresBulkSmsCron() {
 		// for test
-		Crons.rentExpiresBulkSms();
+		// Crons.rentExpiresBulkSms();
 		const job = new CronJob(
 			// At 06:00 on Monday, Wednesday, and Saturday
 			"0 6 * * 1,3,6",
