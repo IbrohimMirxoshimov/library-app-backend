@@ -101,7 +101,12 @@ const Crons = {
 						as: "stock",
 						attributes: ["id", "locationId"],
 						where: { locationId: 1 },
-						include: { as: "book", model: Book, attributes: ["name"] },
+						paranoid: false,
+						include: {
+							as: "book",
+							model: Book,
+							attributes: ["name"],
+						},
 					},
 					order: [["updatedAt", "ASC"]],
 				});
