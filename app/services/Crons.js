@@ -22,6 +22,9 @@ function getTime(rent) {
 }
 
 function getBookName(rent) {
+	if (!rent.stock.book) {
+		console.log(rent);
+	}
 	return rent.stock.book.name;
 }
 
@@ -251,7 +254,7 @@ const Crons = {
 					phone_number: `998${rent.user.phone}`,
 					text: text,
 				}).catch((e) => {
-					console.error(e, rent.user.phone, text);
+					console.error(e.response, rent.user.phone, text);
 				});
 
 				await Sms.create({
@@ -259,7 +262,7 @@ const Crons = {
 					userId: librarian.id,
 					text,
 					provider: SmsProviderType.eskiz,
-					provider_message_id: res.message_id,
+					provider_message_id: res?.message_id,
 					smsbulkId: smsbulk.id,
 					status: res ? "pending" : "error",
 				});

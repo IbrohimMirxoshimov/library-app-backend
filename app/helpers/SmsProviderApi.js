@@ -90,24 +90,18 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 		};
 	}
 
-	const res = await axios
-		.post(
-			`https://notify.eskiz.uz/api/message/sms/send`,
-			{
-				mobile_phone: phone_number,
-				message: text,
-				from: 4546,
-				callback_url,
-			},
-			{
-				headers: { Authorization: `Bearer ${token}` },
-			}
-		)
-		.catch((e) => {
-			const ne = new Error();
-			ne.data = e.response.data;
-			throw ne;
-		});
+	const res = await axios.post(
+		`https://notify.eskiz.uz/api/message/sms/send`,
+		{
+			mobile_phone: phone_number,
+			message: text,
+			from: 4546,
+			callback_url,
+		},
+		{
+			headers: { Authorization: `Bearer ${token}` },
+		}
+	);
 
 	return {
 		message_id: res.data.id,
