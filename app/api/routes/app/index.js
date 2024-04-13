@@ -5,6 +5,7 @@ const account = require("./account");
 const news = require("./news");
 const stats = require("./stats");
 const collections = require("./collections");
+const ExpiredRentByPhone = require("./expired-rent-info");
 
 module.exports = (app) => {
 	const route = Router();
@@ -15,6 +16,7 @@ module.exports = (app) => {
 	news(route);
 	stats(route);
 	collections(route);
+	ExpiredRentByPhone(route);
 
 	app.use("/app", route);
 };
