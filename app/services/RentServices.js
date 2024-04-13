@@ -23,6 +23,13 @@ const RentServices = {
 		}
 
 		return Rent.findAndCountAll({
+			attributes: [
+				"id",
+				"leasedAt",
+				"returningDate",
+				"userId",
+				"stockId",
+			],
 			include: [
 				{
 					model: Stock,
@@ -31,6 +38,7 @@ const RentServices = {
 						locationId: locationId,
 					},
 					paranoid: false,
+					attributes: ["id", "bookId"],
 					include: {
 						model: Book,
 						as: "book",
@@ -42,7 +50,13 @@ const RentServices = {
 				{
 					model: User,
 					as: "user",
-					attributes: ["id", "firstName", "lastName", "phone", "extraPhone"],
+					attributes: [
+						"id",
+						"firstName",
+						"lastName",
+						"phone",
+						"extraPhone",
+					],
 					paranoid: false,
 					...userOptions,
 				},
