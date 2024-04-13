@@ -221,8 +221,6 @@ const Crons = {
 			);
 
 			if (rents_uniq_by_phone.length === 0) return;
-			console.log(rents_uniq_by_phone.length);
-			return;
 
 			const [librarian] = await User.findAll({
 				where: {
