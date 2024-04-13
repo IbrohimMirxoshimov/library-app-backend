@@ -89,14 +89,16 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 			message_id: "res.data.id",
 		};
 	}
+	const message_id = `E_${generateRandomString(10)}`;
 
-	const res = await axios.post(
+	await axios.post(
 		`https://notify.eskiz.uz/api/message/sms/send`,
 		{
 			mobile_phone: phone_number,
 			message: text,
 			from: 4546,
 			callback_url,
+			user_sms_id: message_id,
 		},
 		{
 			headers: { Authorization: `Bearer ${token}` },
@@ -104,7 +106,7 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 	);
 
 	return {
-		message_id: res.data.id,
+		message_id: message_id,
 	};
 };
 
