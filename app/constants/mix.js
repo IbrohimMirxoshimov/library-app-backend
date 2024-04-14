@@ -8,6 +8,12 @@ const SmsProviderType = {
 	eskiz: 2,
 	manual: 3,
 };
+const SmsStatusEnum = {
+	draft: "draft",
+	pending: "pending",
+	done: "done",
+	error: "error",
+};
 module.exports = {
 	ESKIZ_WEBHOOK_ROUTE: "/eskiz",
 	NO_IMAGE_URL,
@@ -15,4 +21,5 @@ module.exports = {
 	ONE_DAY_IN_MS,
 	ONE_MILLIMETER_IN_PIXEL,
 	SmsProviderType,
+	SmsStatusEnum,
 };

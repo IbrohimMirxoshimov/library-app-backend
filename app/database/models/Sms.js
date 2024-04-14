@@ -1,4 +1,4 @@
-const { SmsProviderType } = require("../../constants/mix");
+const { SmsProviderType, SmsStatusEnum } = require("../../constants/mix");
 const sequelize = require("./sequelize");
 const { DataTypes } = require("sequelize");
 
@@ -13,7 +13,7 @@ const Sms = sequelize.define(
 			type: DataTypes.STRING,
 			defaultValue: "draft",
 			validate: {
-				isIn: [["draft", "pending", "done", "error"]],
+				isIn: [Object.values(SmsStatusEnum)],
 			},
 		},
 		error_reason: {
