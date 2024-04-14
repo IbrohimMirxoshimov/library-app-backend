@@ -10,6 +10,8 @@ const { MAIN_BOT_USERNAME } = require("../../config");
 const Notifications = require("../../services/Notifications");
 const { Telegraf, Context } = require("telegraf");
 const { rentExpiresBulkSms } = require("../../services/Crons");
+const Sms = require("../../database/models/Sms");
+const { SmsStatusEnum } = require("../../constants/mix");
 
 const library_private_group_id = "-1001713623437";
 
@@ -176,14 +178,22 @@ function adminHandlers(bot) {
 			return ctx.reply("Yangilandi");
 		})
 		.command("send_sms", isAdminMiddleware, async (ctx) => {
-			rentExpiresBulkSms()
+			const smses = await Sms.findAll({
+				where: {
+					smsbulkId: 160,
+					status: [SmsStatusEnum.done, SmsStatusEnum.pending],
+				},
+				raw: true,
+			});
+
+			rentExpiresBulkSms(smses.map((s) => s.phone))
 				.then((r) => {
 					if (r) {
 						return ctx.reply(`SMSlar yuborildi: ${r.totalCount}`);
 					}
 				})
 				.catch((e) => {
-					return ctx.reply(`SMS yuborishda xatolik: ${err.message}`);
+					return ctx.reply(`SMS yuborishda xatolik: ${e.message}`);
 				});
 
 			return ctx.reply("Sms yuborish boshlandi");

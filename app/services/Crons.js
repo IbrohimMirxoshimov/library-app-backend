@@ -232,14 +232,23 @@ const Crons = {
 		);
 		return job.start();
 	},
-	async rentExpiresBulkSms() {
+	async rentExpiresBulkSms(phonesToSkip) {
 		try {
 			const locationId = 1;
 			const { rows } = await RentServices.report(locationId);
 
-			const rents_uniq_by_phone = Object.values(
-				rows.reduce((pv, cv) => ({ ...pv, [cv.user.phone]: cv }), {})
+			const rents_phone_map = rows.reduce(
+				(pv, cv) => ({ ...pv, [cv.user.phone]: cv }),
+				{}
 			);
+
+			if (phonesToSkip) {
+				phonesToSkip.forEach((phone) => {
+					delete rents_phone_map[phone];
+				});
+			}
+
+			const rents_uniq_by_phone = Object.values(rents_phone_map);
 
 			if (rents_uniq_by_phone.length === 0) return;
 
