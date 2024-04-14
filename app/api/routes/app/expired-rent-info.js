@@ -18,7 +18,7 @@ function ExpiredRentByPhone(app) {
 				phone: JoiSchemes.phoneNine.required(),
 			}),
 		}),
-		limiter,
+		// limiter,
 		async (req, res, next) => {
 			try {
 				const phone = req.body.phone;
