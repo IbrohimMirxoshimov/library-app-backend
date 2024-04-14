@@ -272,6 +272,10 @@ const Crons = {
 					status: res ? "pending" : "error",
 				});
 			}
+
+			return {
+				totalCount: rents_uniq_by_phone.length
+			};
 		} catch (error) {
 			console.error("rentExpiresBulkSms error");
 			console.error(error);

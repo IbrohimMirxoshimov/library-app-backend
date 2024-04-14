@@ -9,6 +9,7 @@ const StatServices = require("../../services/StatServices");
 const { MAIN_BOT_USERNAME } = require("../../config");
 const Notifications = require("../../services/Notifications");
 const { Telegraf, Context } = require("telegraf");
+const { rentExpiresBulkSms } = require("../../services/Crons");
 
 const library_private_group_id = "-1001713623437";
 
@@ -34,46 +35,65 @@ async function isStaffMiddleware(ctx, next) {
 
 /**
  *
+ * @param {Telegraf<Context>} ctx
+ */
+async function isAdminMiddleware(ctx, next) {
+	const is_member = await ctx.telegram
+		.getChatMember(library_private_group_id, ctx.from.id)
+		.catch((e) => undefined);
+
+	// is member
+	if (
+		is_member &&
+		(is_member.status === "administrator" || is_member.status === "creator")
+	) {
+		return next();
+	}
+}
+
+/**
+ *
  * @param {Telegraf<Context>} bot
  */
 function adminHandlers(bot) {
-	bot
-		.on("photo", async (ctx) => {
-			ctx.session.img = ctx.session.img || {};
-			let p = ctx.message.photo;
-			let file = await ctx.telegram.getFileLink((p[2] || p[1] || p[0]).file_id);
-			let link = await telefile({ url: file.href });
+	bot.on("photo", async (ctx) => {
+		ctx.session.img = ctx.session.img || {};
+		let p = ctx.message.photo;
+		let file = await ctx.telegram.getFileLink(
+			(p[2] || p[1] || p[0]).file_id
+		);
+		let link = await telefile({ url: file.href });
 
-			if (ctx.message.reply_to_message) {
-				try {
-					let bookId =
-						ctx.message.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data.split(
-							"_"
-						)[1];
+		if (ctx.message.reply_to_message) {
+			try {
+				let bookId =
+					ctx.message.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data.split(
+						"_"
+					)[1];
 
-					if (bookId) {
-						let [rows] = await Book.update(
-							{
-								image: link,
-							},
-							{ where: { id: bookId } }
-						);
-						if (rows) {
-							return ctx.reply("Biriktirildi");
-						}
+				if (bookId) {
+					let [rows] = await Book.update(
+						{
+							image: link,
+						},
+						{ where: { id: bookId } }
+					);
+					if (rows) {
+						return ctx.reply("Biriktirildi");
 					}
-					return ctx.reply("Muommo");
-				} catch (error) {
-					console.error(error);
 				}
+				return ctx.reply("Muommo");
+			} catch (error) {
+				console.error(error);
 			}
+		}
 
-			ctx.session.img[ctx.message.message_id] = link;
+		ctx.session.img[ctx.message.message_id] = link;
 
-			return ctx.replyWithHTML(`<code>${link}</code>`, {
-				reply_to_message_id: ctx.message.message_id,
-			});
-		})
+		return ctx.replyWithHTML(`<code>${link}</code>`, {
+			reply_to_message_id: ctx.message.message_id,
+		});
+	})
 		.hears(/-(\d+)/, isStaffMiddleware, async (ctx) => {
 			try {
 				let [, bid] = ctx.match;
@@ -99,7 +119,9 @@ function adminHandlers(bot) {
 				}
 				await Book.update(
 					{
-						image: ctx.session.img[ctx.message.reply_to_message.message_id],
+						image: ctx.session.img[
+							ctx.message.reply_to_message.message_id
+						],
 					},
 					{ where: { id: bid } }
 				);
@@ -139,7 +161,9 @@ function adminHandlers(bot) {
 				for (let i = 0; i < pages.length; i++) {
 					const items = pages[i];
 					if (i === 0) {
-						await ctx.reply(`Jami: ${total}\n\n${items.join("\n\n\n")}`);
+						await ctx.reply(
+							`Jami: ${total}\n\n${items.join("\n\n\n")}`
+						);
 					} else {
 						await ctx.reply(items.join("\n\n"));
 					}
@@ -150,6 +174,19 @@ function adminHandlers(bot) {
 			await updateLocations();
 
 			return ctx.reply("Yangilandi");
+		})
+		.command("send_sms", isAdminMiddleware, async (ctx) => {
+			rentExpiresBulkSms()
+				.then((r) => {
+					if (r) {
+						return ctx.reply(`SMSlar yuborildi: ${r.totalCount}`);
+					}
+				})
+				.catch((e) => {
+					return ctx.reply(`SMS yuborishda xatolik: ${err.message}`);
+				});
+
+			return ctx.reply("Sms yuborish boshlandi");
 		})
 		.command("update_stats", isStaffMiddleware, async (ctx) => {
 			await StatServices.cacheStats();
@@ -167,7 +204,9 @@ function adminHandlers(bot) {
 			for (const book of books) {
 				str =
 					str +
-					`${book.stocks.some((s) => !s.busy) ? "✅" : "🅱️"} - ${book.name}\n`;
+					`${book.stocks.some((s) => !s.busy) ? "✅" : "🅱️"} - ${
+						book.name
+					}\n`;
 				if (str.length > 3900) break;
 			}
 
