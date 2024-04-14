@@ -19,10 +19,20 @@ const eskizToken = {
 exports.SmsTemplates = {
 	rentExpiredWithCustomLink: {
 		id: 10183,
-		getText: (fullName, phone_number) =>
-			`${clearText(
-				fullName
-			)} ijraga olgan kitobingiz vaqtidan kechikibdi\nKechiktirishingiz kutubxonaga katta zarar\n\nHavolaga kiring!\nmehrkutubxonasi.uz/s/${phone_number}`,
+		getText: ({ fullName, url_param, shortFullName = "" }) => {
+			const template = (name, url_param) =>
+				`${clearText(
+					name
+				)} ijraga olgan kitobingiz vaqtidan kechikibdi\nKechiktirishingiz kutubxonaga katta zarar\n\nHavolaga kiring!\nmehrkutubxonasi.uz/s/${url_param}`;
+
+			const text = template(fullName, url_param);
+
+			if (text.length > 160 && shortFullName) {
+				return template(shortFullName, url_param);
+			}
+
+			return text;
+		},
 	},
 	forExtraPhone: {
 		id: 9912,
@@ -55,15 +65,16 @@ async function getEskizAuthToken() {
 }
 
 function clearText(text) {
-	const matched = text.match(/[A-Z '`‘]+$/i);
+	const matched = text.match(/[A-Z '`‘]+/gi);
 
 	if (matched) {
-		return matched[0].replace(/`‘/g, "'");
-	} else {
-		const onlyABC = text.match(/[A-Z ]+$/i);
-		if (onlyABC) {
-			return matched[0];
-		}
+		return matched.join(" ").replace(/`‘/g, "'");
+	}
+
+	const onlyABC = text.match(/[A-Z ]/gi);
+
+	if (onlyABC) {
+		return onlyABC.join(" ");
 	}
 
 	throw new Error("Text clearing error: " + text);

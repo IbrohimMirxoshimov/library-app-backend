@@ -16,6 +16,9 @@ const Sms = sequelize.define(
 				isIn: [["draft", "pending", "done", "error"]],
 			},
 		},
+		error_reason: {
+			type: DataTypes.STRING,
+		},
 		text: {
 			type: DataTypes.TEXT,
 		},

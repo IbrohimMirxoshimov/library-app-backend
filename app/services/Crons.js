@@ -51,7 +51,9 @@ function makeContent(rents) {
 	}
 
 	rows.unshift(
-		`<b>Jami:\n✳️ ${returns} ta\n📖 ${rents.length - returns} ta\n\n***</b>\n`
+		`<b>Jami:\n✳️ ${returns} ta\n📖 ${
+			rents.length - returns
+		} ta\n\n***</b>\n`
 	);
 
 	return rows.join("\n");
@@ -60,7 +62,10 @@ function makeContent(rents) {
 const Crons = {
 	groupNotifications: {
 		send(text) {
-			return Notifications.sendMessageFromTelegramBot(MAIN_GROUP_CHAT_ID, text);
+			return Notifications.sendMessageFromTelegramBot(
+				MAIN_GROUP_CHAT_ID,
+				text
+			);
 		},
 		makeText(rents, hour) {
 			const preHeader =
@@ -83,12 +88,18 @@ const Crons = {
 						[Op.or]: [
 							{
 								returnedAt: {
-									[Op.between]: [new Date(date - 1000 * 60 * 60 * hour), date],
+									[Op.between]: [
+										new Date(date - 1000 * 60 * 60 * hour),
+										date,
+									],
 								},
 							},
 							{
 								createdAt: {
-									[Op.between]: [new Date(date - 1000 * 60 * 60 * hour), date],
+									[Op.between]: [
+										new Date(date - 1000 * 60 * 60 * hour),
+										date,
+									],
 								},
 							},
 						],
@@ -182,9 +193,11 @@ const Crons = {
 			const job = new CronJob(
 				"0 10 * * 5",
 				() => {
-					Notifications.mainChannel.sendStatsOfLastWeek().catch((err) => {
-						console.error(err);
-					});
+					Notifications.mainChannel
+						.sendStatsOfLastWeek()
+						.catch((err) => {
+							console.error(err);
+						});
 				},
 				null,
 				true,
@@ -242,39 +255,51 @@ const Crons = {
 
 			const smsbulk = await SmsBulk.create({
 				attributes: ["id"],
-				text: SmsTemplates.rentExpiredWithCustomLink.getText(
-					"Ahmedev Ahmad",
-					"000000000"
-				),
+				text: SmsTemplates.rentExpiredWithCustomLink.getText({
+					fullName: "Ism",
+					url_param: "Raqam",
+				}),
 				userId: librarian.id,
 			});
 
 			for (const rent of rents_uniq_by_phone) {
-				const text = SmsTemplates.rentExpiredWithCustomLink.getText(
-					`${rent.user.firstName} ${rent.user.lastName}`,
-					rent.user.phone
-				);
+				try {
+					const text = SmsTemplates.rentExpiredWithCustomLink.getText(
+						{
+							fullName: `${rent.user.firstName} ${rent.user.lastName}`,
+							url_param: rent.user.phone,
+							shortFullName: `${rent.user.lastName} ${rent.user.firstName[0]}`,
+						}
+					);
 
-				const res = await sendSmsViaEskiz({
-					phone_number: `998${rent.user.phone}`,
-					text: text,
-				}).catch((e) => {
-					console.error(e.response, rent.user.phone, text);
-				});
+					const res = await sendSmsViaEskiz({
+						phone_number: `998${rent.user.phone}`,
+						text: text,
+					});
 
-				await Sms.create({
-					phone: rent.user.phone,
-					userId: librarian.id,
-					text,
-					provider: SmsProviderType.eskiz,
-					provider_message_id: res?.message_id,
-					smsbulkId: smsbulk.id,
-					status: res ? "pending" : "error",
-				});
+					await Sms.create({
+						phone: rent.user.phone,
+						userId: librarian.id,
+						text,
+						provider: SmsProviderType.eskiz,
+						provider_message_id: res?.message_id,
+						smsbulkId: smsbulk.id,
+						status: "pending",
+					});
+				} catch (error) {
+					console.error(error, rent.user.phone);
+					await Sms.create({
+						phone: rent.user.phone,
+						userId: librarian.id,
+						smsbulkId: smsbulk.id,
+						error_reason: error.message,
+						status: "error",
+					});
+				}
 			}
 
 			return {
-				totalCount: rents_uniq_by_phone.length
+				totalCount: rents_uniq_by_phone.length,
 			};
 		} catch (error) {
 			console.error("rentExpiresBulkSms error");
