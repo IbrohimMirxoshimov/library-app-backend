@@ -71,8 +71,8 @@ async function loadBot() {
 	bot.on("text", mainSend);
 
 	// launch main bot
-	return bot.launch().then(() => {
-		return bot.telegram.sendMessage(DEV_ID, "bot started");
+	bot.launch(() => {
+		bot.telegram.sendMessage(DEV_ID, "bot started").catch(console.error);
 	});
 }
 
