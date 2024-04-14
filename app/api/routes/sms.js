@@ -171,14 +171,7 @@ module.exports = (app) => {
 					{ ...req.query, sort: "id", order: "ASC" },
 					null,
 					Sms,
-					() => [
-						{
-							model: SmsBulk,
-							as: "smsbulk",
-							attributes: ["text"],
-							paranoid: false,
-						},
-					],
+					null,
 					{
 						userId: req.user.id,
 					}
