@@ -4,7 +4,10 @@ const { MAIN_GROUP_CHAT_ID, MAIN_BOT_USERNAME } = require("../config");
 const Notifications = require("./Notifications");
 const StatServices = require("./StatServices");
 const RentServices = require("./RentServices");
-const { sendSmsViaEskiz, SmsTemplates } = require("../helpers/SmsProviderApi");
+const {
+	SmsTemplates,
+	sendBatchSmsViaEskiz,
+} = require("../helpers/SmsProviderApi");
 const { SmsProviderType } = require("../constants/mix");
 const UserStatus = require("../constants/UserStatus");
 const CronJob = require("cron").CronJob;
@@ -271,41 +274,46 @@ const Crons = {
 				userId: librarian.id,
 			});
 
-			for (const rent of rents_uniq_by_phone) {
-				try {
-					const text = SmsTemplates.rentExpiredWithCustomLink.getText(
-						{
+			await sendBatchSmsViaEskiz({
+				messages: rents_uniq_by_phone.map((rent) => {
+					const text =
+						SmsTemplates.rentExpiredWithCustomLinkNew.getText({
 							fullName: `${rent.user.firstName} ${rent.user.lastName}`,
 							url_param: rent.user.phone,
 							shortFullName: `${rent.user.lastName} ${rent.user.firstName[0]}`,
-						}
-					);
+						});
 
-					const res = await sendSmsViaEskiz({
+					return {
 						phone_number: `998${rent.user.phone}`,
 						text: text,
-					});
-
+					};
+				}),
+			})
+				.then(async (messages) => {
+					await Sms.bulkCreate(
+						messages.map((message) => {
+							return {
+								phone: message.to,
+								userId: librarian.id,
+								text: message.text,
+								provider: SmsProviderType.eskiz,
+								provider_message_id: message.user_sms_id,
+								smsbulkId: smsbulk.id,
+								status: "pending",
+							};
+						})
+					);
+				})
+				.catch(async (error) => {
+					console.error(error);
 					await Sms.create({
-						phone: rent.user.phone,
-						userId: librarian.id,
-						text,
-						provider: SmsProviderType.eskiz,
-						provider_message_id: res?.message_id,
-						smsbulkId: smsbulk.id,
-						status: "pending",
-					});
-				} catch (error) {
-					console.error(error, rent.user.phone);
-					await Sms.create({
-						phone: rent.user.phone,
+						phone: "ERROR",
 						userId: librarian.id,
 						smsbulkId: smsbulk.id,
 						error_reason: error.message,
 						status: "error",
 					});
-				}
-			}
+				});
 
 			return {
 				totalCount: rents_uniq_by_phone.length,
