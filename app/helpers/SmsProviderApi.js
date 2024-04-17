@@ -17,6 +17,23 @@ const eskizToken = {
 };
 
 exports.SmsTemplates = {
+	rentExpiredWithCustomLinkNew: {
+		id: 5824,
+		getText: ({ fullName, url_param, shortFullName = "" }) => {
+			const template = (name, url_param) =>
+				`${clearText(
+					name
+				)} ijaraga olgan kitobingiz vaqtidan kechikibdi\nBepul kutubxonaga zarar keltirmaylik\nHavolaga kiring!\nmehrkutubxonasi.uz/s/${url_param}`;
+
+			const text = template(fullName, url_param);
+
+			if (text.length > 160 && shortFullName) {
+				return template(shortFullName, url_param);
+			}
+
+			return text;
+		},
+	},
 	rentExpiredWithCustomLink: {
 		id: 10183,
 		getText: ({ fullName, url_param, shortFullName = "" }) => {
@@ -119,6 +136,40 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 	return {
 		message_id: message_id,
 	};
+};
+
+exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
+	messages,
+	callback_url = APP_ORIGIN + WEBHOOK_PREFIX + ESKIZ_WEBHOOK_ROUTE,
+}) {
+	const preparedMessagesData = messages.map((message) => {
+		smsCharsLimit(message.text);
+		const message_id = `E_${generateRandomString(10)}`;
+
+		return {
+			to: message.phone_number,
+			user_sms_id: message_id,
+			text: message.text,
+		};
+	});
+
+	if (!production) {
+		return preparedMessagesData;
+	}
+
+	await axios.post(
+		`https://notify.eskiz.uz/api/message/sms/send-batch`,
+		{
+			messages: preparedMessagesData,
+			from: 4546,
+			callback_url,
+		},
+		{
+			headers: { Authorization: `Bearer ${await getEskizAuthToken()}` },
+		}
+	);
+
+	return preparedMessagesData;
 };
 
 exports.sendSMSViaPlayMobile = async function sendSMSViaPlayMobile({
