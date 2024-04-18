@@ -163,6 +163,7 @@ exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 			messages: preparedMessagesData,
 			from: 4546,
 			callback_url,
+			dispatch_id: `ed_${generateRandomString(10)}`,
 		},
 		{
 			headers: { Authorization: `Bearer ${await getEskizAuthToken()}` },
