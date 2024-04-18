@@ -178,15 +178,15 @@ function adminHandlers(bot) {
 			return ctx.reply("Yangilandi");
 		})
 		.command("send_sms", isAdminMiddleware, async (ctx) => {
-			const smses = await Sms.findAll({
-				where: {
-					smsbulkId: 160,
-					status: [SmsStatusEnum.done, SmsStatusEnum.pending],
-				},
-				raw: true,
-			});
+			// const smses = await Sms.findAll({
+			// 	where: {
+			// 		smsbulkId: 160,
+			// 		status: [SmsStatusEnum.done, SmsStatusEnum.pending],
+			// 	},
+			// 	raw: true,
+			// });
 
-			rentExpiresBulkSms(smses.map((s) => s.phone))
+			rentExpiresBulkSms()
 				.then((r) => {
 					if (r) {
 						return ctx.reply(`SMSlar yuborildi: ${r.totalCount}`);
