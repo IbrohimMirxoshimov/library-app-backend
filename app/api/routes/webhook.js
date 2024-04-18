@@ -37,7 +37,7 @@ module.exports = () => {
 				 * }}
 				 */
 				const data = req.body;
-				console.log("eskiz_sms", data);
+
 				if (
 					data.status === EskizStatuses.DELIVERED ||
 					data.status === EskizStatuses.REJECTED
