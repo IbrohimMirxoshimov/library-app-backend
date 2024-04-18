@@ -158,7 +158,10 @@ exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 		return preparedMessagesData;
 	}
 
-	const pagesBy200 = toMatrix(preparedMessagesData, 200);
+	// eskiz batch sms sending da max limit borakan 200.
+	// 50 tadan bo'lib jo'natish yaxshiroq
+	// sababi response xato kelib qolsa 50 ta sms xato deb response ketati, 200 tadan ko'ra
+	const pagesBy200 = toMatrix(preparedMessagesData, 50);
 
 	const response = [];
 
