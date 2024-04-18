@@ -10,6 +10,7 @@ const {
 } = require("../config");
 const { generateRandomString } = require("../utils/string");
 const { ESKIZ_WEBHOOK_ROUTE } = require("../constants/mix");
+const { toMatrix } = require("../utils/array");
 
 const eskizToken = {
 	token: "",
@@ -157,20 +158,39 @@ exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 		return preparedMessagesData;
 	}
 
-	await axios.post(
-		`https://notify.eskiz.uz/api/message/sms/send-batch`,
-		{
-			messages: preparedMessagesData,
-			from: 4546,
-			callback_url,
-			dispatch_id: `ed_${generateRandomString(10)}`,
-		},
-		{
-			headers: { Authorization: `Bearer ${await getEskizAuthToken()}` },
-		}
-	);
+	const pagesBy200 = toMatrix(preparedMessagesData, 200);
 
-	return preparedMessagesData;
+	const response = [];
+
+	for (const messages of pagesBy200) {
+		await axios
+			.post(
+				`https://notify.eskiz.uz/api/message/sms/send-batch`,
+				{
+					messages: messages,
+					from: 4546,
+					callback_url,
+					dispatch_id: `ed_${generateRandomString(10)}`,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${await getEskizAuthToken()}`,
+					},
+				}
+			)
+			.then(() => {
+				response.push(...messages);
+			})
+			.catch((e) => {
+				response.push(
+					...messages.map((m) => {
+						m.error_reason = e.response?.data?.message || e.message;
+					})
+				);
+			});
+	}
+
+	return response;
 };
 
 exports.sendSMSViaPlayMobile = async function sendSMSViaPlayMobile({

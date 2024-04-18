@@ -299,7 +299,10 @@ const Crons = {
 								provider: SmsProviderType.eskiz,
 								provider_message_id: message.user_sms_id,
 								smsbulkId: smsbulk.id,
-								status: "pending",
+								error_reason: message.error_reason,
+								status: message.error_reason
+									? "error"
+									: "pending",
 							};
 						})
 					);
