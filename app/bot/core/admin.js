@@ -160,6 +160,7 @@ function adminHandlers(bot) {
 						order: [["id", "DESC"]],
 						raw: true,
 					});
+
 					const smses = await Sms.findAll({
 						where: {
 							smsbulkId: smsBulk.id,
@@ -174,7 +175,7 @@ function adminHandlers(bot) {
 					const mappedIncludedPhones = smses.reduce(
 						(pv, cv) => ({
 							...pv,
-							[cv.phone]: true,
+							[cv.phone.slice(3)]: true,
 						}),
 						{}
 					);
