@@ -12,7 +12,7 @@ module.exports = async (app) => {
 	await expressLoader(app);
 	Logger.info("✌️ Express loaded");
 
-	if (!production) return true;
+	// if (!production) return true;
 	loadBot();
 	Logger.info("✌️ Bot started");
 

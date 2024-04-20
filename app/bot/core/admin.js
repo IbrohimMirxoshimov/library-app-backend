@@ -12,6 +12,7 @@ const { Telegraf, Context } = require("telegraf");
 const { rentExpiresBulkSms } = require("../../services/Crons");
 const Sms = require("../../database/models/Sms");
 const { SmsStatusEnum } = require("../../constants/mix");
+const SmsBulk = require("../../database/models/SmsBulk");
 
 const library_private_group_id = "-1001713623437";
 
@@ -134,10 +135,10 @@ function adminHandlers(bot) {
 			}
 		})
 		.hears(
-			/\/(ijr_erkak|ijr_ayol|ijr) ?(\d+)?/,
+			/\/(ijr_erkak|ijr_ayol|ijr) ?(\d+)? ?(sms)?/,
 			isStaffMiddleware,
 			async (ctx) => {
-				const [, gender, bookId] = ctx.match;
+				const [, gender, bookId, filterErrorPhones] = ctx.match;
 				const filter = {};
 
 				if (gender === "ijr_ayol") {
@@ -153,6 +154,36 @@ function adminHandlers(bot) {
 				}
 
 				const results = await report(1, filter);
+
+				if (filterErrorPhones) {
+					const smsBulk = await SmsBulk.findOne({
+						order: [["id", "DESC"]],
+						raw: true,
+					});
+					const smses = await Sms.findAll({
+						where: {
+							smsbulkId: smsBulk.id,
+							status: [
+								SmsStatusEnum.error,
+								SmsStatusEnum.pending,
+							],
+						},
+						raw: true,
+					});
+
+					const mappedIncludedPhones = smses.reduce(
+						(pv, cv) => ({
+							...pv,
+							[cv.phone]: true,
+						}),
+						{}
+					);
+
+					results.rows = results.rows.filter(
+						(rent) => mappedIncludedPhones[rent.user.phone]
+					);
+				}
+
 				const { total, items } = getReportText(results);
 				const pages = toMatrix(items, 10);
 
