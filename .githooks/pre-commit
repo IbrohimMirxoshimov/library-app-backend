@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if sh —c ": >/dev/tty" >/dev/null 2>/dev/null; then exec >/dev/tty 2>&1; fi
+
+echo "Running lint-staged..."
+
+npm run lint-staged
+
+if [ $? -ne 0 ]; then
+  echo "Lint-staged found issues. Commit aborted!"
+  exit 1
+fi
+
+exit 0
