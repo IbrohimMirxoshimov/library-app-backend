@@ -5,12 +5,14 @@ import { ApiModule } from "./application/api/api.module";
 
 async function bootstrap() {
     const app = await NestFactory.create(ApiModule);
-    await app.useGlobalPipes(
+    app.useGlobalPipes(
         new ValidationPipe({
             transform: true,
             errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-        }),
+        })
     );
+    app.enableCors();
+    app.enableVersioning({ type: VersioningType.URI });
 
     const config = new DocumentBuilder()
         .addBearerAuth()
@@ -23,9 +25,10 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup("docs", app, document);
-    await app.enableCors();
-    app.enableVersioning({ type: VersioningType.URI });
+    await app.init();
 
-    await app.listen(process.env.PORT || 3000);
+    await app.listen(process.env.PORT || 3000, () => {
+        console.log(`Server running port ${process.env.PORT}`);
+    });
 }
 bootstrap();
