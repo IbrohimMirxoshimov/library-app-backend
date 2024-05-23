@@ -11,6 +11,7 @@ export const Tokens = {
     Domain: {
         Users: {
             Repository: Symbol.for("UsersRepository"),
+            Service: Symbol.for('UserService'),
         },
     },
     Infrastructure: {},

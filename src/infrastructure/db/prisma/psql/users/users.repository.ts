@@ -1,15 +1,21 @@
 import { Injectable } from "@nestjs/common";
-import { UsersRepository } from "app/domain/users/users.repository";
-import { User } from "app/domain/users/users.types";
+import { PrismaService } from "../..";
+import { UsersRepository } from "app/domain/users/repositories/users.repository";
+import { User } from "app/domain/users/users";
 
 @Injectable()
 export class UsersRepositoryImpl implements UsersRepository {
+    constructor(private readonly prismaService: PrismaService) {}
+
     findOne(id: number): Promise<User> {
         throw new Error("Method not implemented.");
     }
-    findAll(): Promise<User[]> {
-        throw new Error("Method not implemented.");
+
+    async findAll(): Promise<any[]> {
+        const res = await this.prismaService.users.findMany();
+        return res;
     }
+
     create(user: User): Promise<User> {
         throw new Error("Method not implemented.");
     }

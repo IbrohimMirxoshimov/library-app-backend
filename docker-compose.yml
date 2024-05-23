@@ -1,0 +1,19 @@
+version: '3.7'
+name: mehr_kutubxonasi
+services:
+  postgres:
+    env_file: .env
+    container_name: mehr_kutubxonasi
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - ${DATABASE_PORT:-5440}:5432
+    restart: unless-stopped
+
+volumes:
+  postgres:
