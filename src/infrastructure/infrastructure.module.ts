@@ -3,8 +3,9 @@ import { DbModule } from "./db/db.module";
 
 @Global()
 @Module({
-    imports: [DbModule],
-    controllers: [],
+    imports: [
+        DbModule
+    ],
     providers: [],
 })
 export class InfrastructureModule {}
