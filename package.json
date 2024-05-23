@@ -21,7 +21,7 @@
     },
     "dependencies": {
         "@nestjs/common": "^10.3.7",
-        "@nestjs/config": "^3.2.1",
+        "@nestjs/config": "^3.2.2",
         "@nestjs/core": "^10.3.7",
         "@nestjs/jwt": "^10.2.0",
         "@nestjs/mapped-types": "*",
@@ -43,13 +43,19 @@
         "reflect-metadata": "^0.2.2",
         "rimraf": "^5.0.5",
         "rxjs": "^7.8.1",
+        "source-map-support": "^0.5.21",
         "uuid": "^9.0.1"
     },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/IbrohimMirxoshimov/library-app.git"
     },
-    "keywords": ["library", "clean", "architecture", "solid"],
+    "keywords": [
+        "library",
+        "clean",
+        "architecture",
+        "solid"
+    ],
     "author": "",
     "license": "ISC",
     "bugs": {
