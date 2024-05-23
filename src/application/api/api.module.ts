@@ -1,10 +1,13 @@
 import { Module } from "@nestjs/common";
-import { InfrastructureModule } from "app/infrastructure/infrastructure.module";
+import { UserController } from "./controllers/user/user.controller";
+import { UserModule } from "app/di/modules";
+import { UsecasesProvider } from "app/di/modules/usecases/usecases";
+import { ContainerApi } from "app/di/container/container";
 
 @Module({
-    imports: [InfrastructureModule],
-    controllers: [],
-    providers: [],
+    imports: [ContainerApi, UserModule],
+    controllers: [UserController],
+    providers: [...UsecasesProvider],
     exports: [],
 })
 export class ApiModule {}
