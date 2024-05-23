@@ -1,18 +1,15 @@
-import { User } from "app/domain/users/users.types";
+import { Id } from "app/domain/common/id.types";
+import { User } from "app/domain/users/users";
 import { UseCase } from "../baseUsecase.type";
-import { Id } from "app/domain/Id/id.types";
-import { Inject, Injectable } from "@nestjs/common";
-import { Tokens } from "app/common/token";
-import { UsersRepository } from "app/domain/users/users.repository";
+import { UsersRepository } from "app/domain/users/repositories/users.repository";
+import { UserService } from "app/domain/users/services/user-service";
 
 export interface FindAllUserUsecase extends UseCase<Id, User[]> {}
 
-@Injectable()
 export class FindAllUserUsecaseImpl implements FindAllUserUsecase {
-    constructor(
-        @Inject(Tokens.Domain.Users.Repository) private readonly usersRepository: UsersRepository,
-    ) {}
+    constructor(private readonly userService: UserService) {}
+
     public async execute(id: Id): Promise<User[]> {
-        return this.usersRepository.findAll();
+        return this.userService.findAllUsers();
     }
 }
