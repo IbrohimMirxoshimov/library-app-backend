@@ -1,4 +1,4 @@
-import { Id } from "../Id/id.types";
+import { Id } from "../common/id.types";
 
 export type Book = {
     id: Id;
