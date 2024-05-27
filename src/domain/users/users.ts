@@ -1,24 +1,24 @@
 import { BaseEntity } from "../common/base-entity";
 import { UserModel } from "./services/users.types";
 
-export class User extends BaseEntity<UserModel> implements UserModel {
-  public get id() {
-    return this.data.id;
-  }
-
-  public get firstname() {
-    return this.data.firstname;
-  }
-  public get lastname() {
-    return this.data.firstname;
-  }
-  public get locationId() {
-    return this.data.firstname;
-  }
-  public get createdAt() {
-    return this.data.firstname;
-  }
-  public get updatedAt() {
-    return this.data.firstname;
+export class User extends BaseEntity<UserModel> {
+  public get first_name(): string {
+    return this.data.first_name;
+  };
+  public get last_name(): string {
+    return this.data.last_name;
+  };
+  public get location_id(): number {
+    return this.data.location_id;
+  };
+  public get created_at(): Date {
+    return this.data.created_at;
+  };
+  public get updated_at(): Date {
+    return this.data.updated_at;
+  };
+  
+  public set updated_at(updated_at: Date) {
+    this.data.updated_at = updated_at;
   }
 }

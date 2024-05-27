@@ -1,6 +1,6 @@
 import { Id } from "app/domain/common/id.types";
 import { UseCase } from "../baseUsecase.type";
-import { UsersRepository } from "app/domain/users/repositories/users.repository";
+import { UsersRepository } from "app/domain/users";
 
 export interface DeleteUserUseCase extends UseCase<Id, boolean> {}
 

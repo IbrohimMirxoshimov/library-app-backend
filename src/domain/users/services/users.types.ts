@@ -1,12 +1,11 @@
-import { Id } from "app/domain/common/id.types";
 
 export type UserModel = {
-    id: Id;
-    firstname: string;
-    lastname: string;
-    locationId: string;
-    createdAt: string;
-    updatedAt: string;
+  id?: number;
+  first_name: string;
+  last_name: string;
+  location_id: number;
+  created_at: Date;
+  updated_at: Date;
 };
 
-export type UserCreate = Omit<UserModel, "id" | "createdAt" | "updatedAt">;
+export type UserCreate = Pick<UserModel, 'first_name' | 'last_name' | 'location_id' | 'created_at'>;

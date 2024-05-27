@@ -1,14 +1,14 @@
-import { User } from "app/domain/users/users";
+import { UsersRepository } from "app/domain/users";
 import { UseCase } from "../baseUsecase.type";
-import { UsersRepository } from "app/domain/users/repositories/users.repository";
+import { UserModel } from "app/domain/users/services/users.types";
 
-export interface UpdateUserUsecase extends UseCase<User, User> {}
+export interface UpdateUserUsecase extends UseCase<UserModel, UserModel> {}
 
 export class UpdateUserUsecaseImpl implements UpdateUserUsecase {
     constructor(
         private readonly usersRepository: UsersRepository,
     ) {}
-    public async execute(user: User): Promise<User> {
+    public async execute(user: UserModel): Promise<UserModel> {
         return this.usersRepository.update(user);
     }
 }

@@ -1,25 +1,36 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../..";
-import { UsersRepository } from "app/domain/users/repositories/users.repository";
-import { User } from "app/domain/users/users";
+import { UserCreate, UserModel } from "app/domain/users/services/users.types";
+import { UsersRepository } from "app/domain/users/repository/users.repository";
 
 @Injectable()
 export class UsersRepositoryImpl implements UsersRepository {
-    constructor(private readonly prismaService: PrismaService) {}
+    constructor(private readonly prismaService: PrismaService) { }
 
-    findOne(id: number): Promise<User> {
-        throw new Error("Method not implemented.");
-    }
-
-    async findAll(): Promise<any[]> {
+    async findAll(): Promise<UserModel[]> {
         const res = await this.prismaService.users.findMany();
         return res;
     }
 
-    create(user: User): Promise<User> {
-        throw new Error("Method not implemented.");
+    async findByParam(param: UserModel): Promise<UserModel> {
+        const res = await this.prismaService.users.findFirst({
+            where: param
+        });
+        return res;
     }
-    update(user: User): Promise<User> {
+
+    async create(user: UserCreate): Promise<UserModel | null> {
+        return this.prismaService.users.create({
+            data: {
+                first_name: user.first_name,
+                last_name: user.last_name,
+                location_id: user.location_id,
+                created_at: new Date(),
+                updated_at: new Date(),
+            }
+        });
+    }
+    update(user: UserModel): Promise<UserModel> {
         throw new Error("Method not implemented.");
     }
     delete(id: number): Promise<boolean> {
