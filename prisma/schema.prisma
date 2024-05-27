@@ -22,10 +22,10 @@ model Stocks {
   id         Int        @id @default(autoincrement())
   busy       Boolean?
   created_at DateTime?
-  book       Books      @relation(fields: [bookId], references: [id])
-  bookId     Int
-  location   Locations  @relation(fields: [stockId], references: [id])
-  stockId    Int
+  book       Books      @relation(fields: [book_id], references: [id])
+  book_id     Int
+  location   Locations  @relation(fields: [stock_id], references: [id])
+  stock_id    Int
   Rents      Rents[]
   Comments   Comments[]
 }
@@ -33,37 +33,37 @@ model Stocks {
 model Books {
   id           Int         @id @default(autoincrement())
   name         String?
-  author       Authors     @relation(fields: [authorId], references: [id])
-  authorId     Int
+  author       Authors     @relation(fields: [author_id], references: [id])
+  author_id     Int
   rentDuration Int
   pages        Int
-  booksGroup   BooksGroups @relation(fields: [booksGroupId], references: [id])
-  booksGroupId Int
-  publisher    Publishers  @relation(fields: [publisherId], references: [id])
-  publisherId  Int
-  collection   Collections @relation(fields: [collectionId], references: [id])
-  collectionId Int
+  booksGroup   BooksGroups @relation(fields: [books_group_id], references: [id])
+  books_group_id Int
+  publisher    Publishers  @relation(fields: [publisher_id], references: [id])
+  publisher_id  Int
+  collection   Collections @relation(fields: [collection_id], references: [id])
+  collection_id Int
   Stocks       Stocks[]
 }
 
 model Users {
   id         Int       @id @default(autoincrement())
-  firstName  String?
-  lastName   String
-  location   Locations @relation(fields: [locationId], references: [id])
-  locationId Int
+  first_name  String?
+  last_name   String
+  location   Locations @relation(fields: [location_id], references: [id])
+  location_id Int
   created_at DateTime
-  updated_at DateTime
+  updated_at DateTime?
   Rents      Rents[]
   Sms        Sms[]
 }
 
 model Rents {
   id       Int        @id @default(autoincrement())
-  stock    Stocks     @relation(fields: [stockId], references: [id])
-  stockId  Int
-  user     Users      @relation(fields: [userId], references: [id])
-  userId   Int
+  stock    Stocks     @relation(fields: [stock_id], references: [id])
+  stock_id  Int
+  user     Users      @relation(fields: [user_id], references: [id])
+  user_id   Int
   Comments Comments[]
 }
 
@@ -78,8 +78,8 @@ model Locations {
   name       String?
   created_at DateTime
   updated_at DateTime
-  region     Regions  @relation(fields: [regionId], references: [id])
-  regionId   Int
+  region     Regions  @relation(fields: [region_id], references: [id])
+  region_id   Int
   Stocks     Stocks[]
   Users      Users[]
 }
@@ -87,7 +87,7 @@ model Locations {
 model BooksGroups {
   id           Int     @id @default(autoincrement())
   name         String?
-  rentDuration Int
+  rent_duration Int
   pages        Int
   Books        Books[]
 }
@@ -96,7 +96,7 @@ model Regions {
   id         Int         @id @default(autoincrement())
   name       String?
   created_at DateTime
-  updated_at DateTime
+  updated_at DateTime?
   Locations  Locations[]
 }
 
@@ -117,10 +117,10 @@ model Comments {
   text       String?
   created_at DateTime
   updated_at DateTime
-  stock      Stocks   @relation(fields: [stockid], references: [id])
-  stockid    Int
-  rent       Rents?   @relation(fields: [rentId], references: [id])
-  rentId     Int?
+  stock      Stocks   @relation(fields: [stock_id], references: [id])
+  stock_id    Int
+  rent       Rents?   @relation(fields: [rent_id], references: [id])
+  rent_id     Int?
 }
 
 model SmsBulk {
@@ -131,14 +131,14 @@ model SmsBulk {
 
 model Sms {
   id                  Int     @id @default(autoincrement())
-  text                Int?
+  text                String
   phone               Int
-  user                Users?  @relation(fields: [userId], references: [id])
-  userId              Int?
+  user                Users?  @relation(fields: [user_id], references: [id])
+  user_id             Int
   status              String?
   error_reason        String?
   provider            String
   provider_message_id String
-  smsbulk             SmsBulk @relation(fields: [smsbulkId], references: [id])
-  smsbulkId           Int
+  smsbulk             SmsBulk @relation(fields: [smsbulk_id], references: [id])
+  smsbulk_id           Int
 }

@@ -1,16 +1,19 @@
 import { Provider } from "@nestjs/common";
 import { CreateUserUseCaseImpl, FindAllUserUsecaseImpl, FindUserUseCaseImpl } from "app/application/usecases/users";
 import { Tokens } from "app/common/token";
-import { UsersRepository } from "app/domain/users/repositories/users.repository";
-import { UserService } from "app/domain/users/services/user-service";
+import { LocationService } from "app/domain";
+import { UserService, UsersRepository } from "app/domain/users";
 
 export const UserUsecasesProvider: Provider[] = [
   {
     provide: Tokens.Usecase.Users.Create,
-    useFactory: (userRepository: UsersRepository) => {
-      return new CreateUserUseCaseImpl(userRepository)
+    useFactory: (userService: UserService, locationService: LocationService) => {
+      return new CreateUserUseCaseImpl(userService, locationService)
     },
-    inject: [Tokens.Domain.Users.Repository]
+    inject: [
+      Tokens.Domain.Users.Service,
+      Tokens.Domain.Locations.Service,
+    ]
   },
   {
     provide: Tokens.Usecase.Users.FindAll,

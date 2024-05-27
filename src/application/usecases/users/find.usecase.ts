@@ -1,15 +1,14 @@
-import { Id } from "app/domain/common/id.types";
-import { User } from "app/domain/users/users";
+import { UsersRepository } from "app/domain/users";
 import { UseCase } from "../baseUsecase.type";
-import { UsersRepository } from "app/domain/users/repositories/users.repository";
+import { UserModel } from "app/domain/users/services/users.types";
 
-export interface FindUserUseCase extends UseCase<Id, User> {}
+export interface FindUserUseCase extends UseCase<Partial<UserModel>, UserModel> {}
 
 export class FindUserUseCaseImpl implements FindUserUseCase {
     constructor(
         private readonly usersRepository: UsersRepository,
     ) {}
-    public async execute(input: Id): Promise<User> {
-        return this.usersRepository.findOne(input);
+    public async execute(input: Partial<UserModel>): Promise<UserModel> {
+        return this.usersRepository.findByParam(input);
     }
 }
