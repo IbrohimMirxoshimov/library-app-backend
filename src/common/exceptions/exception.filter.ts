@@ -21,7 +21,7 @@ export class GlobalExceptionFilter extends BaseExceptionFilter implements Except
         error_code: exception.error_code,
         statusCode: exception.statusCode,
         message: exception.getMessage[language],
-        data: exception.data,
+        data: exception.data || {},
         createdAt: exception.createdAt,
       }
 

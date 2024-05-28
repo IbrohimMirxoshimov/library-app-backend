@@ -29,7 +29,10 @@ export class CreateUserUseCaseImpl implements CreateUserUseCase {
         if (!location) {
             throw new NotFoundException(
                 LocationErrorMessages[LocationErrorCodes.NotFound], 
-                LocationErrorCodes.NotFound
+                LocationErrorCodes.NotFound,
+                {
+                    location_id: input.location_id,
+                }
             )
         }
 

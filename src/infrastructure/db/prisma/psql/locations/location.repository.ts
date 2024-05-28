@@ -4,16 +4,27 @@ import { PrismaService } from "../..";
 
 @Injectable()
 export class LocationRepositoryImpl implements LocationRepository {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) { }
 
-  create(data: Location): Promise<IdResponse> {
-    throw new Error("Method not implemented.");
+  async create(input: Location): Promise<IdResponse> {
+    const { name, created_at, region_id, updated_at} = input;
+    const res = await this.prismaService.locations.create({
+      data: {
+        name,
+        region_id,
+        created_at,
+        updated_at,
+      }
+    });
+    return { id: res.id };
   }
-  findByParam(param: Partial<LocationModule>): Promise<LocationModule> {
-    throw new Error("Method not implemented.");
+  async findByParam(param: Partial<LocationModule>): Promise<LocationModule> {
+    return this.prismaService.locations.findFirst({
+      where: param,
+    });
   }
   findAll(): Promise<LocationModule[] | []> {
-    throw new Error("Method not implemented.");
+    return this.prismaService.locations.findMany();
   }
-  
+
 }
