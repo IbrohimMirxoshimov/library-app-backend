@@ -18,127 +18,276 @@ datasource db {
 // Define the data model
 // schema.prisma
 
-model Stocks {
-  id         Int        @id @default(autoincrement())
-  busy       Boolean?
-  created_at DateTime?
-  book       Books      @relation(fields: [book_id], references: [id])
-  book_id     Int
-  location   Locations  @relation(fields: [stock_id], references: [id])
-  stock_id    Int
-  Rents      Rents[]
-  Comments   Comments[]
+enum Gender {
+  male
+  female
 }
 
-model Books {
-  id           Int         @id @default(autoincrement())
-  name         String?
-  author       Authors     @relation(fields: [author_id], references: [id])
-  author_id     Int
-  rentDuration Int
-  pages        Int
-  booksGroup   BooksGroups @relation(fields: [books_group_id], references: [id])
-  books_group_id Int
-  publisher    Publishers  @relation(fields: [publisher_id], references: [id])
-  publisher_id  Int
-  collection   Collections @relation(fields: [collection_id], references: [id])
-  collection_id Int
-  Stocks       Stocks[]
+enum SmsStatusEnum {
+  draft
+  sent
+  failed
 }
 
-model Users {
-  id         Int       @id @default(autoincrement())
-  first_name  String?
-  last_name   String
-  location   Locations @relation(fields: [location_id], references: [id])
-  location_id Int
-  created_at DateTime
-  updated_at DateTime?
-  Rents      Rents[]
-  Sms        Sms[]
+enum SmsProviderType {
+  eskiz
+  manual
+  play_mobile
 }
 
-model Rents {
-  id       Int        @id @default(autoincrement())
-  stock    Stocks     @relation(fields: [stock_id], references: [id])
-  stock_id  Int
-  user     Users      @relation(fields: [user_id], references: [id])
-  user_id   Int
-  Comments Comments[]
+model User {
+  id             Int      @id @default(autoincrement())
+  firstName      String
+  lastName       String?
+  fullName       String?
+  username       String   @unique
+  phone          String?
+  extraPhone     String?
+  blockingReason String?
+  extra          String?
+  password       String   @default("") @db.VarChar(32) // Assuming a VARCHAR(32) column in the database
+  gender         Gender
+  birthDate      DateTime?
+  owner          Boolean  @default(false)
+  moderator      Boolean  @default(false)
+  librarian      Boolean  @default(false)
+  verified       Boolean  @default(false)
+  status         Int      @default(1) // Assuming UserStatus.active = 1
+  balance        Int      @default(0)
+  phoneVerified  Boolean  @default(false)
+  telegramId     String?
+  passportId     String?  @unique
+  passportImage  String?
+  tempLocationId Int?
+  pinfl          String?  @unique
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // relations
+  rents         Rent[]
+  address       Address?
+  sms           Sms[]
+  smsBulks      SmsBulk[]
+  library       Location?   @relation(fields: [libraryId], references: [id])
+  libraryId     Int?        // Foreign key for library relation
+  books         Book[]      @relation()
+  creatorId Int
+
+  @@map("users")
+  @@unique([passportId, pinfl])
 }
 
-model Authors {
-  id    Int     @id @default(autoincrement())
-  name  String?
-  Books Books[]
+model Town {
+  id        Int    @id @default(autoincrement())
+  name      String @unique
+  region        Region      @relation(fields: [regionId], references: [id])
+  regionId      Int         // Foreign key for region relation
+  deletedAt DateTime?
+
+  @@map("town")
 }
 
-model Locations {
-  id         Int      @id @default(autoincrement())
-  name       String?
-  created_at DateTime
-  updated_at DateTime
-  region     Regions  @relation(fields: [region_id], references: [id])
-  region_id   Int
-  Stocks     Stocks[]
-  Users      Users[]
-}
+model Stock {
+  id Int @id @default(autoincrement())
+  busy Boolean @default(false)
+  deletedAt DateTime?
 
-model BooksGroups {
-  id           Int     @id @default(autoincrement())
-  name         String?
-  rent_duration Int
-  pages        Int
-  Books        Books[]
-}
+  // relations
+  location      Location    @relation(fields: [locationId], references: [id])
+  locationId    Int         // Foreign key for location relation
+  comments      Comments[]
+  bookId Int
 
-model Regions {
-  id         Int         @id @default(autoincrement())
-  name       String?
-  created_at DateTime
-  updated_at DateTime?
-  Locations  Locations[]
-}
-
-model Publishers {
-  id    Int     @id @default(autoincrement())
-  name  String?
-  Books Books[]
-}
-
-model Collections {
-  id    Int     @id @default(autoincrement())
-  name  String?
-  Books Books[]
-}
-
-model Comments {
-  id         Int      @id @default(autoincrement())
-  text       String?
-  created_at DateTime
-  updated_at DateTime
-  stock      Stocks   @relation(fields: [stock_id], references: [id])
-  stock_id    Int
-  rent       Rents?   @relation(fields: [rent_id], references: [id])
-  rent_id     Int?
+  @@map("stocks")
 }
 
 model SmsBulk {
   id   Int   @id @default(autoincrement())
   text Int
-  Sms  Sms[]
+
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int         // Foreign key for user relation
+  smss          Sms[]
+
+  @@map("smsbulk")
 }
 
 model Sms {
-  id                  Int     @id @default(autoincrement())
-  text                String
-  phone               Int
-  user                Users?  @relation(fields: [user_id], references: [id])
-  user_id             Int
-  status              String?
-  error_reason        String?
-  provider            String
-  provider_message_id String
-  smsbulk             SmsBulk @relation(fields: [smsbulk_id], references: [id])
-  smsbulk_id           Int
+  id                 Int              @id @default(autoincrement())
+  phone              String
+  status             SmsStatusEnum    @default(draft)
+  error_reason       String?
+  text               String?
+  provider           SmsProviderType?
+  provider_message_id String?
+
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int         // Foreign key for user relation
+  smsBulk       SmsBulk?    @relation(fields: [smsBulkId], references: [id])
+  smsBulkId     Int? 
+
+  @@map("sms")
+}
+
+
+model Rent {
+  id             Int      @id @default(autoincrement())
+  leasedAt       DateTime
+  customId       Int?
+  returningDate  DateTime
+  returnedAt     DateTime?
+  rejected       Boolean  @default(false)
+  deletedAt      DateTime?
+
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int 
+  location      Location    @relation(fields: [locationId], references: [id])
+  locationId    Int         // Foreign key for location relation
+  comments      Comments[]
+
+  @@map("rent")
+}
+
+model Region {
+  id Int @id @default(autoincrement())
+  name String @unique
+  towns         Town[]
+  locations     Location[]
+  deletedAt DateTime?
+
+  @@map("region")
+} 
+
+model Publishing {
+  id Int @id @default(autoincrement())
+  name String @unique
+  deletedAt DateTime?
+
+  @@map("publishing")
+} 
+
+model News {
+  id Int @id @default(autoincrement())
+  title String
+  content String
+  image String?
+  deletedAt DateTime?
+  createdAt DateTime? @default(now())
+
+  @@map("news")
+}
+
+model Location {
+  id         Int      @id @default(autoincrement())
+  name       String @unique
+  link        String?
+  active Boolean? @default(true)
+  description String?
+  updatedAt DateTime?
+  
+  // relations
+  rents         Rent[]
+  address       Address
+  users         User[]
+  stocks        Stock[]
+  libraryId Int
+  region        Region      @relation(fields: [regionId], references: [id])
+  regionId      Int  
+
+  @@map("location")
+}
+
+model Comments {
+  id         Int      @id @default(autoincrement())
+  text       String?
+  updatedAt DateTime?
+
+  // relations
+  stock         Stock?      @relation(fields: [stockId], references: [id])
+  stockId       Int?        // Foreign key for stock relation
+  rent          Rent?       @relation(fields: [rentId], references: [id])
+  rentId        Int? 
+
+  @@map("comments")
+}
+
+model Collections {
+  id    Int     @id @default(autoincrement())
+  name  String @unique
+  sort Int @default(0)
+  deletedAt DateTime?
+  
+  // relations
+  books         Book[]
+  @@map("collection")
+}
+
+model BooksGroups {
+  id           Int     @id @default(autoincrement())
+  name         String @unique
+  description String?
+  image String?
+  deletedAt DateTime?
+
+  // relations
+  books Book[]
+
+  @@map("booksGroups")
+}
+
+model Book {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  description  String?
+  image        String?
+  isbn         String?
+  language     String   @default("uz")
+  rentDuration Int      @default(15)
+  price        Int      @default(50000)
+  printedAt    DateTime?
+  pages        Int?
+  sort         Int      @default(0)
+  few          Int      @default(2)
+  deletedAt    DateTime?
+
+  // relation
+  author        Author      @relation(fields: [authorId], references: [id])
+  authorId      Int         // Foreign key for author relation
+  collection    Collections? @relation(fields: [collectionId], references: [id])
+  collectionId  Int?        // Foreign key for collection relation
+  booksGroup    BooksGroups? @relation(fields: [booksGroupId], references: [id])
+  booksGroupId Int?        // Foreign key for booksGroup relation
+  creator       User        @relation(fields: [creatorId], references: [id])
+  creatorId     Int   
+
+  @@map("books")
+}
+
+model Author {
+  id    Int     @id @default(autoincrement())
+  name  String
+  deletedAt DateTime?
+
+  books         Book[]
+  creatorId     Int 
+  @@map("author")
+}
+
+model Address {
+  id           Int     @id @default(autoincrement())
+  countryCode  String  @default("uz")
+  region       String
+  town         String?
+  addressLine  String
+  street       String?
+  home         String?
+  latitude     Float?
+  longitude    Float?
+  deletedAt DateTime?
+
+  userId        Int?        // Foreign key for user relation
+  location      Location    @relation(fields: [locationId], references: [id])
+  locationId    Int  @unique
+  
+  @@map("address")
 }
