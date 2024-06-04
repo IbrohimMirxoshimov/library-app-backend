@@ -64,14 +64,21 @@ model User {
   updatedAt     DateTime    @updatedAt
 
   // relations
-  rents         Rent[]
-  address       Address?
-  sms           Sms[]
-  smsBulks      SmsBulk[]
-  library       Location?   @relation(fields: [libraryId], references: [id])
-  libraryId     Int?        // Foreign key for library relation
-  books         Book[]      @relation()
-  creatorId Int
+  rents Rent[]
+  sms Sms[]
+  smsBulks SmsBulk[]
+  books Book[]
+  authors Author[]
+
+  address Address? @relation(fields: [addressId], references: [id])
+  addressId Int? @unique
+
+  locations Location @relation("locationId", fields: [locationId], references: [id])
+  locationId Int 
+
+  library Location? @relation("libraryRelation", fields: [libraryId], references: [id])
+  libraryId Int? @unique
+
 
   @@map("users")
   @@unique([passportId, pinfl])
@@ -80,10 +87,12 @@ model User {
 model Town {
   id        Int    @id @default(autoincrement())
   name      String @unique
-  region        Region      @relation(fields: [regionId], references: [id])
-  regionId      Int         // Foreign key for region relation
   deletedAt DateTime?
 
+  // relations
+  region        Region      @relation(fields: [regionId], references: [id])
+  regionId      Int         // Foreign key for region relation
+  
   @@map("town")
 }
 
@@ -96,6 +105,8 @@ model Stock {
   location      Location    @relation(fields: [locationId], references: [id])
   locationId    Int         // Foreign key for location relation
   comments      Comments[]
+  rent Rent?
+  book Book @relation(fields: [bookId], references: [id])
   bookId Int
 
   @@map("stocks")
@@ -105,9 +116,10 @@ model SmsBulk {
   id   Int   @id @default(autoincrement())
   text Int
 
+  // relations
   user          User        @relation(fields: [userId], references: [id])
   userId        Int         // Foreign key for user relation
-  smss          Sms[]
+  sms Sms[]
 
   @@map("smsbulk")
 }
@@ -121,10 +133,11 @@ model Sms {
   provider           SmsProviderType?
   provider_message_id String?
 
-  user          User        @relation(fields: [userId], references: [id])
-  userId        Int         // Foreign key for user relation
-  smsBulk       SmsBulk?    @relation(fields: [smsBulkId], references: [id])
-  smsBulkId     Int? 
+  // relations
+  user User @relation(fields: [userId], references: [id])
+  userId Int
+  sms SmsBulk @relation(fields: [smsbulkId], references: [id])
+  smsbulkId Int
 
   @@map("sms")
 }
@@ -144,6 +157,8 @@ model Rent {
   location      Location    @relation(fields: [locationId], references: [id])
   locationId    Int         // Foreign key for location relation
   comments      Comments[]
+  stock Stock @relation(fields: [stockId], references: [id])
+  stockId Int @unique
 
   @@map("rent")
 }
@@ -151,9 +166,11 @@ model Rent {
 model Region {
   id Int @id @default(autoincrement())
   name String @unique
+  deletedAt DateTime?
+
+  // relations
   towns         Town[]
   locations     Location[]
-  deletedAt DateTime?
 
   @@map("region")
 } 
@@ -187,10 +204,10 @@ model Location {
   
   // relations
   rents         Rent[]
-  address       Address
-  users         User[]
+  address       Address?
+  users         User[] @relation("locationId")
+  library       User? @relation("libraryRelation")
   stocks        Stock[]
-  libraryId Int
   region        Region      @relation(fields: [regionId], references: [id])
   regionId      Int  
 
@@ -251,14 +268,15 @@ model Book {
   deletedAt    DateTime?
 
   // relation
-  author        Author      @relation(fields: [authorId], references: [id])
-  authorId      Int         // Foreign key for author relation
-  collection    Collections? @relation(fields: [collectionId], references: [id])
-  collectionId  Int?        // Foreign key for collection relation
-  booksGroup    BooksGroups? @relation(fields: [booksGroupId], references: [id])
-  booksGroupId Int?        // Foreign key for booksGroup relation
-  creator       User        @relation(fields: [creatorId], references: [id])
-  creatorId     Int   
+  stocks Stock[]
+  author Author @relation(fields: [authorId], references: [id])
+  authorId Int
+  collection Collections @relation(fields: [collectionId], references: [id])
+  collectionId Int
+  booksGroup BooksGroups @relation(fields: [booksGroupId], references: [id])
+  booksGroupId Int
+  user User @relation(fields: [creatorId], references: [id])
+  creatorId Int
 
   @@map("books")
 }
@@ -268,7 +286,9 @@ model Author {
   name  String
   deletedAt DateTime?
 
+  // relations
   books         Book[]
+  user User @relation(fields: [creatorId], references: [id])
   creatorId     Int 
   @@map("author")
 }
@@ -285,7 +305,8 @@ model Address {
   longitude    Float?
   deletedAt DateTime?
 
-  userId        Int?        // Foreign key for user relation
+  // relations
+  user User?
   location      Location    @relation(fields: [locationId], references: [id])
   locationId    Int  @unique
   
