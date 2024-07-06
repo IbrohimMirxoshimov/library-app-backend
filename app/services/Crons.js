@@ -349,7 +349,7 @@ const Crons = {
 		this.donationChannel.sendLastWeekStatsCron();
 		this.mainChannelNotifications.warningAboutRentExpires();
 		this.mainChannelNotifications.lastWeekStats();
-		this.rentExpiresBulkSmsCron();
+		// this.rentExpiresBulkSmsCron();
 		this.superAdminNotifications();
 		StatServices.setCachingStatsCron();
 	},
