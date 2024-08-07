@@ -15,28 +15,34 @@ const StatServices = {
 	async getTopReadingBooks(
 		locationId = 1,
 		size = 10,
-		fromDate = getOneMonthBackDate(),
-		untilDate = new Date()
+		from = getOneMonthBackDate(),
+		untill = new Date()
 	) {
 		return sequelize
 			.query(
 				`SELECT sum(s.count::int) as count, books.name, books.id
-				FROM (
-					SELECT stocks."bookId", count(rents.id) 
-					FROM rents 
-					LEFT JOIN stocks 
-					ON rents."stockId" = stocks.id 
-					WHERE rents.rejected = false and stocks."locationId" = ${locationId} and 
-					rents."createdAt" between ${pgFormatDate(fromDate)} and ${pgFormatDate(
-					untilDate
-				)} 
-					GROUP BY stocks."bookId"
-				) s
-				LEFT JOIN books
-				ON s."bookId" = books.id
-				GROUP BY books.id
-				ORDER BY count DESC
-				LIMIT ${size}`
+FROM (
+	SELECT stocks."bookId", count(rents.id) 
+	FROM rents 
+	LEFT JOIN stocks 
+	ON rents."stockId" = stocks.id 
+	WHERE rents.rejected = false and stocks."locationId" = :locationId and 
+	rents."createdAt" between :from and :untill
+	GROUP BY stocks."bookId"
+) s
+LEFT JOIN books
+ON s."bookId" = books.id
+GROUP BY books.id
+ORDER BY count DESC
+LIMIT :size`,
+				{
+					replacements: {
+						from,
+						untill,
+						locationId,
+						size,
+					},
+				}
 			)
 			.then((r) => r[0]);
 	},
@@ -64,21 +70,36 @@ const StatServices = {
 			},
 		});
 	},
-	async getTopLibrarians(select = []) {
+	/**
+	 * @param {{ from?: Date, untill?: Date, select?: string[], size?: number }} filter
+	 * @returns
+	 */
+	async getTopLibrarians(filter = {}) {
 		return (
 			await sequelize.query(
 				`SELECT ${[
-					...select,
+					...(filter.select || []),
 					'"lastName"',
 					"count(rents.id)",
 					"users.id as user_id",
 				].join(", ")}
-			FROM users
-			RIGHT JOIN rents
-			ON users.id = rents."userId" 
-			WHERE rents.rejected = false and rents."returnedAt" is not null and rents."deletedAt" is null
-			GROUP BY users.id
-			ORDER BY count DESC LIMIT 50`
+FROM users
+RIGHT JOIN rents
+ON users.id = rents."userId"
+WHERE rents.rejected = false 
+and rents."returnedAt" is not null 
+and rents."deletedAt" is null 
+and rents."createdAt" between :from and :untill
+GROUP BY users.id
+ORDER BY count DESC 
+LIMIT :size`,
+				{
+					replacements: {
+						from: filter.from || new Date(2020),
+						untill: filter.untill || new Date(),
+						size: filter.size || 10,
+					},
+				}
 			)
 		)[0];
 	},
@@ -281,8 +302,8 @@ const StatServices = {
 			.then((data) => JSON.parse(data.toString()));
 	},
 	setCachingStatsCron() {
-		const CACHE_UPDATE_TIME = 1000 * 60 * 60;
-		this.cacheStats().catch(console.error);
+		const CACHE_UPDATE_TIME = 1000 * 60 * 60 * 4;
+		// this.cacheStats().catch(console.error);
 		setInterval(() => {
 			this.cacheStats().catch(console.error);
 		}, CACHE_UPDATE_TIME);
@@ -400,6 +421,7 @@ const StatServices = {
 				fromDate: filter.from,
 				untillDate: filter.untill,
 			}),
+			top_librarians: await this.getTopLibrarians(filter),
 		};
 	},
 	async lastMonthStats() {

@@ -53,7 +53,9 @@ module.exports = (app) => {
 
 				if (!phones.length) {
 					if (users_filter === users_filter_types.top_librarians) {
-						const librarians = await StatServices.getTopLibrarians(["phone"]);
+						const librarians = await StatServices.getTopLibrarians({
+							select: ["phone"],
+						});
 
 						phones.push(...librarians.map((r) => r.phone));
 					} else {
