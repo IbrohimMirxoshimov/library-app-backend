@@ -193,11 +193,20 @@ const StatServices = {
 
 		const one_month_leased_rents_by_day = await Rent.findAll({
 			attributes: [
-				[sequelize.fn("date_trunc", "day", sequelize.col("createdAt")), "day"],
+				[
+					sequelize.fn(
+						"date_trunc",
+						"day",
+						sequelize.col("createdAt")
+					),
+					"day",
+				],
 				[sequelize.literal(`COUNT(id)`), "count"],
 			],
 			where: {
-				createdAt: { [Op.between]: [getOneMonthBackDate(), new Date()] },
+				createdAt: {
+					[Op.between]: [getOneMonthBackDate(), new Date()],
+				},
 			},
 			raw: true,
 			group: ["day"],
@@ -206,11 +215,20 @@ const StatServices = {
 
 		const one_month_returned_rents_by_day = await Rent.findAll({
 			attributes: [
-				[sequelize.fn("date_trunc", "day", sequelize.col("returnedAt")), "day"],
+				[
+					sequelize.fn(
+						"date_trunc",
+						"day",
+						sequelize.col("returnedAt")
+					),
+					"day",
+				],
 				[sequelize.literal(`COUNT(id)`), "count"],
 			],
 			where: {
-				returnedAt: { [Op.between]: [getOneMonthBackDate(), new Date()] },
+				returnedAt: {
+					[Op.between]: [getOneMonthBackDate(), new Date()],
+				},
 			},
 			raw: true,
 			group: ["day"],
@@ -236,7 +254,8 @@ const StatServices = {
 			),
 			leased_books_count_of_last_month: leased_books_count_of_last_month,
 			leased_books_count_of_last_week: leased_books_count_of_last_week,
-			leased_books_count_of_last_24_hours: leased_books_count_of_last_24_hours,
+			leased_books_count_of_last_24_hours:
+				leased_books_count_of_last_24_hours,
 			one_month_leased_rents_by_day: one_month_leased_rents_by_day,
 			one_month_returned_rents_by_day: one_month_returned_rents_by_day,
 			top_books_last_week: top_books_last_week,
