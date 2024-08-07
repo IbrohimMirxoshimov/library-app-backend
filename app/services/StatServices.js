@@ -43,7 +43,7 @@ const StatServices = {
 	getRentsCount({
 		locationId = 1,
 		fromDate = getOneMonthBackDate(),
-		untilDate = new Date(),
+		untillDate = new Date(),
 	}) {
 		return Rent.count({
 			where: {
@@ -51,7 +51,7 @@ const StatServices = {
 					[Op.not]: true,
 				},
 				createdAt: {
-					[Op.between]: [fromDate, untilDate],
+					[Op.between]: [fromDate, untillDate],
 				},
 			},
 			include: {
@@ -290,12 +290,12 @@ const StatServices = {
 	getNewUsersCount({
 		locationId = 1,
 		fromDate = getOneMonthBackDate(),
-		untilDate = new Date(),
+		untillDate = new Date(),
 	}) {
 		return User.count({
 			where: {
 				createdAt: {
-					[Op.between]: [fromDate, untilDate],
+					[Op.between]: [fromDate, untillDate],
 				},
 				locationId: locationId,
 				phone: {
@@ -370,6 +370,35 @@ const StatServices = {
 			rents_count: await this.getRentsCount({
 				locationId: 1,
 				fromDate: date,
+			}),
+		};
+	},
+	/**
+	 *
+	 * @param {{from: Date, untill: Date}} filter
+	 * @returns
+	 */
+	async getStatByRange(filter) {
+		console.log(filter);
+
+		return {
+			from_date: filter.from,
+			untill_date: filter.untill,
+			new_users: await this.getNewUsersCount({
+				locationId: 1,
+				fromDate: filter.from,
+				untillDate: filter.untill,
+			}),
+			top_books: await this.getTopReadingBooks(
+				1,
+				10,
+				filter.from,
+				filter.untill
+			),
+			rents_count: await this.getRentsCount({
+				locationId: 1,
+				fromDate: filter.from,
+				untillDate: filter.untill,
 			}),
 		};
 	},
