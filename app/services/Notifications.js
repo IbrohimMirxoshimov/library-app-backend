@@ -8,7 +8,12 @@ const {
 const StatServices = require("./StatServices");
 const { Rent, Stock } = require("../database/models");
 const { Op } = require("sequelize");
-const { getOneDayBackDate } = require("../utils/date");
+const {
+	getOneDayBackDate,
+	getFirstAndLastDateOfMonth,
+	getPreviousMonth,
+	getDateMonthInUzbek,
+} = require("../utils/date");
 
 function getDonatePostLink() {
 	return "https://t.me/kutubxona_hissadorlari/3";
@@ -48,18 +53,24 @@ const Notifications = {
 	},
 	mainChannel: {
 		notifyWarningMessageAboutRentExpires() {
-			return axios.post(`https://api.telegram.org/bot${TOKEN}/copyMessage`, {
-				chat_id: MAIN_CHANNEL_CHAT_ID,
-				message_id: 1078,
-				from_chat_id: MAIN_CHANNEL_CHAT_ID,
-			});
+			return axios.post(
+				`https://api.telegram.org/bot${TOKEN}/copyMessage`,
+				{
+					chat_id: MAIN_CHANNEL_CHAT_ID,
+					message_id: 1078,
+					from_chat_id: MAIN_CHANNEL_CHAT_ID,
+				}
+			);
 		},
 		happyFriday() {
-			return axios.post(`https://api.telegram.org/bot${TOKEN}/copyMessage`, {
-				chat_id: MAIN_CHANNEL_CHAT_ID,
-				message_id: 1102,
-				from_chat_id: MAIN_CHANNEL_CHAT_ID,
-			});
+			return axios.post(
+				`https://api.telegram.org/bot${TOKEN}/copyMessage`,
+				{
+					chat_id: MAIN_CHANNEL_CHAT_ID,
+					message_id: 1102,
+					from_chat_id: MAIN_CHANNEL_CHAT_ID,
+				}
+			);
 		},
 		async sendStatsOfLastWeek() {
 			return Notifications.mainChannel.sendMessageToMainTelegramChannel(
@@ -73,24 +84,22 @@ const Notifications = {
 				options
 			);
 		},
-		getLastDateStatsText({
-			new_users,
-			top_books,
-			rents_count,
-			range_name,
-			from_date,
-			untill_date,
-		}) {
-			return `<b>📊 Oxirgi ${range_name}da kutubxona natijalari
-${new Date(from_date).toLocaleDateString("ru")} - ${new Date(
-				untill_date
+		/**
+		 *
+		 * @param {string} header
+		 * @param {Awaited<ReturnType<typeof StatServices.getStatByRange>>} stats
+		 */
+		generateStatsText(header, stats) {
+			return `<b>${header}
+${new Date(stats.from_date).toLocaleDateString("ru")} - ${new Date(
+				stats.untill_date
 			).toLocaleDateString("ru")}
 
-📖 O'qish uchun olingan kitoblar soni: ${rents_count}
-🧑‍🚀 Yangi kitobxonlar: ${new_users}
+📖 O'qish uchun olingan kitoblar soni: ${stats.rents_count}
+🧑‍🚀 Yangi kitobxonlar: ${stats.new_users}
 
 📚 Eng ko'p o'qish uchun olingan 10 kitob:
-${top_books
+${stats.top_books
 	.slice(0, 10)
 	.map((book, i) => `${i + 1}. ${book.name} - ${book.count} ta`)
 	.join("\n")}
@@ -104,11 +113,87 @@ Siz ham kutubxonaga hissa qo'shib ko‘pchilikning bepul ilm olishiga sababchi b
 👉 <a href="https://t.me/mehr_kutubxonasi/129">Bepul kutubxona</a>
 👉 <a href="https://t.me/kutubxona_hissadorlari/3">Kutubxonaga hissa qo‘shish</a>
 
-Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi</b>`;
+✳️ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi</b>`;
 		},
+		/**
+		 *
+		 * @param {Awaited<ReturnType<typeof StatServices.getTopReaders>>} stats
+		 * @param {Date} from
+		 */
+		generateTopReadersStat(stats, from) {
+			console.log(stats);
+
+			const icons = ["🥇", "🥈", "🥉"];
+			return `<b>🏆 ${getDateMonthInUzbek(
+				from
+			)} oyida eng ko'p kitob oʻqib topshirgan 10 kitobxon
+
+${stats
+	.slice()
+	.slice(0, 10)
+	.map((user, i) => `${icons[i] || "📘"}${user.lastName} - ${user.count}`)
+	.join("\n")}
+
+Familiya va topshirilgan kitoblar soni
+
+Alhamdulillah!
+
+👉 <a href="https://mehrkutubxonasi.uz/statistika">To'liq statistika</a>
+
+Siz ham kutubxonaga hissa qo'shib ko‘pchilikning bepul ilm olishiga sababchi bo‘lishingiz mumkin
+
+👉 <a href="https://t.me/mehr_kutubxonasi/129">Bepul kutubxona</a>
+👉 <a href="https://t.me/kutubxona_hissadorlari/3">Kutubxonaga hissa qo‘shish</a>
+
+✳️ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi</b>
+`;
+		},
+
 		async lastWeekStatsMessage() {
 			const stats = await StatServices.lastWeekStats();
-			return this.getLastDateStatsText(stats);
+			return this.generateStatsText(
+				`📊 Oxirgi haftada kutubxona natijalari`,
+				stats
+			);
+		},
+
+		async prevMonthStatsMessage() {
+			const dateRangePrevMonth = getFirstAndLastDateOfMonth(
+				getPreviousMonth()
+			);
+
+			const stats = await StatServices.getStatByRange({
+				from: dateRangePrevMonth.first,
+				untill: dateRangePrevMonth.last,
+			});
+
+			return this.generateStatsText("📊 O'tgan oy natijalari", stats);
+		},
+
+		async prevMonthTopReadersMessage() {
+			const dateRangePrevMonth = getFirstAndLastDateOfMonth(
+				getPreviousMonth()
+			);
+
+			const stats = await StatServices.getTopReaders({
+				from: dateRangePrevMonth.first,
+				untill: dateRangePrevMonth.last,
+			});
+
+			return this.generateTopReadersStat(stats, dateRangePrevMonth.first);
+		},
+
+		async prevMonthStatsMessage() {
+			const dateRangePrevMonth = getFirstAndLastDateOfMonth(
+				getPreviousMonth()
+			);
+
+			const stats = await StatServices.getStatByRange({
+				from: dateRangePrevMonth.first,
+				untill: dateRangePrevMonth.last,
+			});
+
+			return this.generateStatsText("📊 O'tgan oy statistikasi", stats);
 		},
 	},
 	superAdminNotifications: {
@@ -117,10 +202,9 @@ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi
 				DEV_ID,
 				(await StatServices.getFewBooks({ locationId: 1 }))
 					.map((result) => {
-						return `${result.total}/${result.busies} - ${result.name.slice(
-							0,
-							30
-						)}`;
+						return `${result.total}/${
+							result.busies
+						} - ${result.name.slice(0, 30)}`;
 					})
 					.join("\n")
 					.slice(0, 4000)
@@ -138,12 +222,18 @@ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi
 						[Op.or]: [
 							{
 								returnedAt: {
-									[Op.between]: [new Date(date - 1000 * 60 * 60 * hour), date],
+									[Op.between]: [
+										new Date(date - 1000 * 60 * 60 * hour),
+										date,
+									],
 								},
 							},
 							{
 								createdAt: {
-									[Op.between]: [new Date(date - 1000 * 60 * 60 * hour), date],
+									[Op.between]: [
+										new Date(date - 1000 * 60 * 60 * hour),
+										date,
+									],
 								},
 							},
 						],
@@ -166,9 +256,9 @@ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi
 					fromDate: getOneDayBackDate(),
 				});
 
-				const text = `${daylyStatTextDonationChannel(rents)}\n${getTextNewUsers(
-					new_users_count
-				)}\n\n${getTextDonate()}`;
+				const text = `${daylyStatTextDonationChannel(
+					rents
+				)}\n${getTextNewUsers(new_users_count)}\n\n${getTextDonate()}`;
 
 				await Notifications.sendMessageFromTelegramBot(
 					DONATION_CHANNEL_CHAT_ID,
@@ -183,6 +273,31 @@ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi
 				await Notifications.sendMessageFromTelegramBot(
 					DONATION_CHANNEL_CHAT_ID,
 					await Notifications.mainChannel.lastWeekStatsMessage()
+				);
+			} catch (error) {
+				console.error(error);
+			}
+		},
+
+		sendPrevMonthStats: async () => {
+			try {
+				await Notifications.mainChannel.sendMessageToMainTelegramChannel(
+					await Notifications.mainChannel.prevMonthStatsMessage()
+				);
+
+				await Notifications.sendMessageFromTelegramBot(
+					DONATION_CHANNEL_CHAT_ID,
+					await Notifications.mainChannel.prevMonthStatsMessage()
+				);
+			} catch (error) {
+				console.error(error);
+			}
+		},
+
+		sendPrevMonthTopReadersMessage: async () => {
+			try {
+				await Notifications.mainChannel.sendMessageToMainTelegramChannel(
+					await Notifications.mainChannel.prevMonthTopReadersMessage()
 				);
 			} catch (error) {
 				console.error(error);

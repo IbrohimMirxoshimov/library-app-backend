@@ -6,7 +6,7 @@ const { toMatrix } = require("../../utils/array");
 const { updateLocations, getLocation } = require("../cache");
 const { getBooksWithStocks } = require("../fetch");
 const StatServices = require("../../services/StatServices");
-const { MAIN_BOT_USERNAME } = require("../../config");
+const { MAIN_BOT_USERNAME, production } = require("../../config");
 const Notifications = require("../../services/Notifications");
 const { Telegraf, Context } = require("telegraf");
 const { rentExpiresBulkSms } = require("../../services/Crons");
@@ -21,6 +21,10 @@ const library_private_group_id = "-1001713623437";
  * @param {Telegraf<Context>} ctx
  */
 async function isStaffMiddleware(ctx, next) {
+	if (!production) {
+		return next();
+	}
+
 	const is_member = await ctx.telegram
 		.getChatMember(library_private_group_id, ctx.from.id)
 		.catch((e) => undefined);
@@ -268,9 +272,15 @@ function adminHandlers(bot) {
 		)
 		.command("month", isStaffMiddleware, async (ctx) =>
 			ctx.replyWithHTML(
-				Notifications.mainChannel.getLastDateStatsText(
-					await StatServices.lastMonthStats()
-				),
+				await Notifications.mainChannel.prevMonthStatsMessage(),
+				{
+					disable_web_page_preview: true,
+				}
+			)
+		)
+		.command("month_top_readers", isStaffMiddleware, async (ctx) =>
+			ctx.replyWithHTML(
+				await Notifications.mainChannel.prevMonthTopReadersMessage(),
 				{
 					disable_web_page_preview: true,
 				}

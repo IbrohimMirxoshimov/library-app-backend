@@ -208,6 +208,28 @@ const Crons = {
 			);
 			job.start();
 		},
+		sendPrevMonthStats() {
+			// every month 1 on 10:05
+			const job = new CronJob(
+				"5 10 1 * *",
+				Notifications.donationChannel.sendPrevMonthStats,
+				null,
+				true,
+				"Asia/Tashkent"
+			);
+			job.start();
+		},
+		sendPrevMonthTopReaders() {
+			// every month 1 on 10:05
+			const job = new CronJob(
+				"5 13 1 * *",
+				Notifications.donationChannel.sendPrevMonthTopReadersMessage,
+				null,
+				true,
+				"Asia/Tashkent"
+			);
+			job.start();
+		},
 		happyFridayCron() {
 			// every Friday on 8:00
 			const job = new CronJob(
@@ -347,6 +369,8 @@ const Crons = {
 		this.groupNotifications.startSendingRentLeaseAndReturnInfoEveryHourCron();
 		this.donationChannel.sendDonationDaylyStatsDonationChannelCron();
 		this.donationChannel.sendLastWeekStatsCron();
+		this.mainChannelNotifications.sendPrevMonthStats();
+		this.mainChannelNotifications.sendPrevMonthTopReaders();
 		this.mainChannelNotifications.warningAboutRentExpires();
 		this.mainChannelNotifications.lastWeekStats();
 		this.rentExpiresBulkSmsCron();
