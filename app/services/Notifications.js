@@ -132,20 +132,22 @@ ${stats
 	.slice()
 	.slice(0, 10)
 	.map((user, i) => `${icons[i] || "📘"}${user.lastName} - ${user.count}`)
-	.join("\n")}
+	.join("\n")}</b>
 
 Familiya va topshirilgan kitoblar soni
 
+<b>✳️ Eslatma</b>
+Ro'yxatda boshqa odam uchun o'z nomiga kitob olgan kitobxonalar ham bo'lishi mumkin. Son muhim emas. Muhimi kitobdan manfaat olish!
+
 Alhamdulillah!
 
-👉 <a href="https://mehrkutubxonasi.uz/statistika">To'liq statistika</a>
-
-Siz ham kutubxonaga hissa qo'shib ko‘pchilikning bepul ilm olishiga sababchi bo‘lishingiz mumkin
+✳️ Siz ham kutubxonaga hissa qo'shib ko‘pchilikning bepul ilm olishiga sababchi bo‘lishingiz mumkin
 
 👉 <a href="https://t.me/mehr_kutubxonasi/129">Bepul kutubxona</a>
 👉 <a href="https://t.me/kutubxona_hissadorlari/3">Kutubxonaga hissa qo‘shish</a>
+👉 <a href="https://mehrkutubxonasi.uz/statistika">To'liq statistika</a>
 
-✳️ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi</b>
+<b>✳️ Foydali deb topgan bo‘lsangiz, yaqinlaringizga ham ulashing\n@mehr_kutubxonasi</b>
 `;
 		},
 
