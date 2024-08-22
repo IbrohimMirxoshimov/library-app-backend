@@ -74,7 +74,7 @@ LIMIT :size`,
 	 * @param {{ from?: Date, untill?: Date, select?: string[], size?: number }} filter
 	 * @returns
 	 */
-	async getTopLibrarians(filter = {}) {
+	async getTopReaders(filter = {}) {
 		return (
 			await sequelize.query(
 				`SELECT ${[
@@ -87,9 +87,8 @@ FROM users
 RIGHT JOIN rents
 ON users.id = rents."userId"
 WHERE rents.rejected = false 
-and rents."returnedAt" is not null 
+and rents."returnedAt" between :from and :untill
 and rents."deletedAt" is null 
-and rents."createdAt" between :from and :untill
 GROUP BY users.id
 ORDER BY count DESC 
 LIMIT :size`,
@@ -106,7 +105,7 @@ LIMIT :size`,
 	async getStatsFromDB(locationId = 1) {
 		// top librarian
 		// LEFT(users."firstName",1) as "firstName",
-		const top_librarians = await this.getTopLibrarians();
+		const top_librarians = await this.getTopReaders();
 
 		// gender
 		const [gender] = await sequelize.query(
@@ -382,7 +381,6 @@ LIMIT :size`,
 		return {
 			from_date: date,
 			untill_date: new Date(),
-			range_name: "hafta",
 			new_users: await this.getNewUsersCount({
 				locationId: 1,
 				fromDate: date,
@@ -400,8 +398,6 @@ LIMIT :size`,
 	 * @returns
 	 */
 	async getStatByRange(filter) {
-		console.log(filter);
-
 		return {
 			from_date: filter.from,
 			untill_date: filter.untill,
@@ -421,7 +417,6 @@ LIMIT :size`,
 				fromDate: filter.from,
 				untillDate: filter.untill,
 			}),
-			top_librarians: await this.getTopLibrarians(filter),
 		};
 	},
 	async lastMonthStats() {
