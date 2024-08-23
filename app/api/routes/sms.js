@@ -13,7 +13,6 @@ const HttpError = require("../../utils/HttpError");
 const route = Router();
 
 const users_filter_types = {
-	all: "all",
 	active_reading: "active_reading",
 	rent_expired: "rent_expired",
 	top_librarians: "top_librarians",
@@ -49,7 +48,7 @@ module.exports = (app) => {
 				users_filter: Joi.string().valid(
 					...Object.values(users_filter_types)
 				),
-				text: Joi.string().required(),
+				text: Joi.string().required().min(10),
 				phones: Joi.array().items(Joi.string().length(9)),
 			}),
 		}),
@@ -68,7 +67,10 @@ module.exports = (app) => {
 						});
 
 						phones.push(...librarians.map((r) => r.phone));
-					} else {
+					} else if (
+						users_filter === users_filter_types.active_reading ||
+						users_filter === users_filter_types.rent_expired
+					) {
 						const where = {
 							rejected: {
 								[Op.not]: true,
@@ -103,6 +105,7 @@ module.exports = (app) => {
 							where: where,
 							group: ["user.id", "rent.userId"],
 							attributes: ["rent.userId"],
+							limit: 500,
 						});
 
 						phones.push(...rents.map((r) => r.user.phone));
