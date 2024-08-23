@@ -97,8 +97,8 @@ function clearText(text) {
 
 	throw new Error("Text clearing error: " + text);
 }
-function smsCharsLimit(text) {
-	if (text.length > 160) {
+function smsCharsLimit(text, limit = 160) {
+	if (text.length > limit) {
 		throw new Error("Sms char limit error");
 	}
 
@@ -109,8 +109,9 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 	phone_number,
 	text,
 	callback_url = APP_ORIGIN + WEBHOOK_PREFIX + ESKIZ_WEBHOOK_ROUTE,
+	message_text_limit = 160,
 }) {
-	smsCharsLimit(text);
+	smsCharsLimit(text, message_text_limit);
 	const token = await getEskizAuthToken();
 
 	if (!production) {
@@ -139,12 +140,22 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 	};
 };
 
+/**
+ * 
+ * @param {{
+ * messages: {text: string, phone_number: string}[],
+ * callback_url?: string,
+ * message_text_limit?: number
+ * }} param0 
+ * @returns 
+ */
 exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 	messages,
 	callback_url = APP_ORIGIN + WEBHOOK_PREFIX + ESKIZ_WEBHOOK_ROUTE,
+	message_text_limit = 160,
 }) {
 	const preparedMessagesData = messages.map((message) => {
-		smsCharsLimit(message.text);
+		smsCharsLimit(message.text, message_text_limit);
 		const message_id = `E_${generateRandomString(10)}`;
 
 		return {
@@ -163,7 +174,7 @@ exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 	// sababi response xato kelib qolsa 50 ta sms xato deb response ketati, 200 tadan ko'ra
 	const pagesBy200 = toMatrix(preparedMessagesData, 50);
 
-	const response = [];
+	const responseMessages = [];
 
 	for (const messages of pagesBy200) {
 		await axios
@@ -182,10 +193,10 @@ exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 				}
 			)
 			.then(() => {
-				response.push(...messages);
+				responseMessages.push(...messages);
 			})
 			.catch((e) => {
-				response.push(
+				responseMessages.push(
 					...messages.map((m) => {
 						m.error_reason = e.response?.data?.message || e.message;
 					})
@@ -193,7 +204,7 @@ exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 			});
 	}
 
-	return response;
+	return responseMessages;
 };
 
 exports.sendSMSViaPlayMobile = async function sendSMSViaPlayMobile({
