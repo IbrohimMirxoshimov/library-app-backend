@@ -228,7 +228,7 @@ async function customMessagesByJson(req, res, next) {
 		.items(
 			Joi.object({
 				text: Joi.string().required(),
-				phone_number: Joi.string().regex(/\+998\d{9}/),
+				phone_number: Joi.string().regex(/998\d{9}/),
 			})
 		)
 		.validate(message_and_phone_data);
