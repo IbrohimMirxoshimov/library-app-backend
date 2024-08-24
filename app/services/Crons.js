@@ -373,7 +373,7 @@ const Crons = {
 		this.mainChannelNotifications.sendPrevMonthTopReaders();
 		this.mainChannelNotifications.warningAboutRentExpires();
 		this.mainChannelNotifications.lastWeekStats();
-		this.rentExpiresBulkSmsCron();
+		// this.rentExpiresBulkSmsCron();
 		this.superAdminNotifications();
 		StatServices.setCachingStatsCron();
 	},
