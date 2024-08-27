@@ -105,7 +105,9 @@ LIMIT :size`,
 	async getStatsFromDB(locationId = 1) {
 		// top librarian
 		// LEFT(users."firstName",1) as "firstName",
-		const top_librarians = await this.getTopReaders();
+		const top_librarians = await this.getTopReaders({
+			size: 30,
+		});
 
 		// gender
 		const [gender] = await sequelize.query(
