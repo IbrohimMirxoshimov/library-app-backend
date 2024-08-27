@@ -36,8 +36,8 @@ Scene.enter(async (ctx) => {
 💡 Holat: <b>${UserStatusTrasnlate[user.status]}</b>`;
 
 	const keyboard = Markup.inlineKeyboard([
-		[Markup.button.switchToCurrentChat("📘 O'qigan kitoblarim", "my_books_1")],
-		[Markup.button.switchToCurrentChat("📖 O'qiyapman", "my_books_0")],
+		[Markup.button.switchToCurrentChat("📘 O'qigan kitoblarim", "my_1")],
+		[Markup.button.switchToCurrentChat("📖 O'qiyapman", "my_0")],
 		[backButton()],
 	]);
 

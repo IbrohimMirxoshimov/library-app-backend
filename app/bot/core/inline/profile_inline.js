@@ -1,8 +1,9 @@
+const { Context } = require("telegraf");
 const { NO_IMAGE_URL, ONE_DAY_IN_MS } = require("../../../constants/mix");
 const AccountServices = require("../../../services/app/AccountServices");
 
 function isMyBooksQuery(query) {
-	return query.match(/my_books_(\d{0,1})/);
+	return query.match(/my_(\d{0,1})/);
 }
 const getRamainedDays = (rent) => {
 	let remain = new Date(rent.returningDate) - new Date();
@@ -39,15 +40,26 @@ function getRentDateRange(rent) {
 
 	return `${t}\n` + getRemainedText(rent);
 }
+
+/**
+ * @param {Context} ctx
+ * @returns
+ */
 async function answerMyBooksQuery(ctx) {
-	let [, returned] = ctx.inlineQuery.query.match(/my_books_(\d{0,1})/);
-	let { rows } = await AccountServices.getUserBooks(
-		ctx.session.user.id,
-		returned === "1"
-	);
+	const [, returned] = ctx.inlineQuery.query.match(/my_(\d{0,1})/);
+	const pageIndex = parseInt(ctx.inlineQuery.offset) || 1;
+
+	let { rows } = await AccountServices.getUserBooks({
+		page: pageIndex,
+		size: 15,
+		returned: returned === "1",
+		userId: ctx.session.user.id,
+	});
 
 	// no result
 	if (!rows?.length) {
+		if (pageIndex > 1) return;
+
 		return ctx.answerInlineQuery([
 			{
 				id: 1213882378,
@@ -72,6 +84,7 @@ async function answerMyBooksQuery(ctx) {
 	}));
 
 	return ctx.answerInlineQuery(rows, {
+		next_offset: pageIndex + 1,
 		cache_time: 60,
 	});
 }

@@ -3,13 +3,14 @@ const { getListOptions } = require("../../api/middlewares/utils");
 const { Op } = require("sequelize");
 
 module.exports = {
-	getUserBooks(userId, returned) {
+	getUserBooks({ userId, returned, size, page }) {
 		return Rent.findAndCountAll(
 			getListOptions(
 				{
 					filters: { userId: userId },
-					sort: "returningDate",
-					size: 10,
+					sort: "updatedAt",
+					size,
+					page,
 				},
 				{
 					options: {
