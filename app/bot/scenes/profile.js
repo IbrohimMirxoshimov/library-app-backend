@@ -28,12 +28,17 @@ Scene.enter(async (ctx) => {
 		},
 	});
 
-	const text = `${getGenderIcon(user.gender)} Kitobxon: <b>${user.firstName} ${
-		user.lastName || ""
-	}</b>
-☎️ Telefon raqam: <b>${user.phone}</b>\n📑 Passport: <b>${user.passportId}</b>
-💳 Balans: <b>${user.balance} so'm</b>
-💡 Holat: <b>${UserStatusTrasnlate[user.status]}</b>`;
+	const text = `${getGenderIcon(user.gender)} Kitobxon: <b>${
+		user.firstName
+	} ${user.lastName || ""}</b>
+☎️ Telefon raqam: <b><tg-spoiler>${
+		user.phone
+	}</tg-spoiler></b>\n📑 Passport: <b>${user.passportId.slice(
+		0,
+		2
+	)}******${user.passportId.slice(-1)}</b>
+Holat: <b>${UserStatusTrasnlate[user.status]}</b>
+${user.balance ? `💳 Balans: <b>${user.balance} so'm</b>` : ""}`;
 
 	const keyboard = Markup.inlineKeyboard([
 		[Markup.button.switchToCurrentChat("📘 O'qigan kitoblarim", "my_1")],
