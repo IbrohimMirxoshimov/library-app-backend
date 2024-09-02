@@ -355,8 +355,8 @@ const Crons = {
 		// for test
 		// Crons.rentExpiresBulkSms();
 		const job = new CronJob(
-			// At 06:00 on Tuesday, Thursday, and Sunday
-			"0 6 * * 2,4,0",
+			// At 06:00 on Wednesday and Sunday
+			"0 6 * * 3,0",
 			this.rentExpiresBulkSms,
 			null,
 			true,
