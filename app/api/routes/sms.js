@@ -57,7 +57,8 @@ module.exports = (app) => {
 				const { users_filter, text, phones = [] } = req.body;
 
 				if (users_filter === users_filter_types.by_json) {
-					return customMessagesByJson(req, res, next);
+					await customMessagesByJson(req, res, next);
+					return;
 				}
 
 				if (!phones.length) {
