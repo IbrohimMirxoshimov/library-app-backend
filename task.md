@@ -37,3 +37,13 @@
 	- Nima sababdan kechiktiryapsiz? [sabablar]
 	- Necha kunda o'qib bo'lasiz [1,2,3,4,5,6,7]
 	- Ogohlantirish va tashakkur -> Profile
+
+### Verifikatsiya user
+1. Uchta telefon raqam olish
+2. Sms kod bilan tasdiqlash (eskiz)
+3. Qolgan raqamlarga sms yuborish (app)
+4. Botga ulash
+	- Verifikatsiya kod kelganda link ham keladi. Botga kriish uchun
+	- agar interneti bo'lmasa telefonni tochkasiga ulanish
+5. Passportni rasmga olish. kopiyani to'xtatish.
+6. MI home 360 kamerasini olish
