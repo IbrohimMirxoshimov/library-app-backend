@@ -47,3 +47,7 @@
 	- agar interneti bo'lmasa telefonni tochkasiga ulanish
 5. Passportni rasmga olish. kopiyani to'xtatish.
 6. MI home 360 kamerasini olish
+
+### Migration to TS
+1. Nestjsga ogirish
+	- permission based
