@@ -23,3 +23,8 @@
 2. record qo'shish
 3. Tugallash
 4. List
+
+### Kitob
+1. Kitobga oid o'zgarishlar log saqlanishi
+2. Hamma kitoblarni muddatini eng kamida 10 kun qilish
+3. Agar kitob 20 kundan kam bo'lsa warning chiqarish
