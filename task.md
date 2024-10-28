@@ -28,3 +28,12 @@
 1. Kitobga oid o'zgarishlar log saqlanishi
 2. Hamma kitoblarni muddatini eng kamida 10 kun qilish
 3. Agar kitob 20 kundan kam bo'lsa warning chiqarish
+
+### Kitob uzaytirish
+1. Holatni olib tashlaymiz
+2. Kechiktirilgan kitob bo'lsa ko'rsatib turish
+2. Kitobimni uzaytirish 
+	- Kitobni tanlang 
+	- Nima sababdan kechiktiryapsiz? [sabablar]
+	- Necha kunda o'qib bo'lasiz [1,2,3,4,5,6,7]
+	- Ogohlantirish va tashakkur -> Profile
