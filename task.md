@@ -77,3 +77,13 @@
         - o'rniga ball bilan tekshiriladi
         - ball yetsa kitob oladi. Yoki pul to'lab ball olishi mumkin.
         - pulni olganda pulga mos ball ayirilb tashaladi.
+
+# Ijaralarni lokatsiyaga bog'lash
+1. Hozir rent -> stock -> location. vazifa rent -> location
+2. Tasir qiladigan joylar
+    - statistika
+    - add rent
+    - update rent
+    - rent list filter
+    - qidirib ko'rish kerak boshqalarini
+3. rent listga filter qo'shish kerak admin uchun
