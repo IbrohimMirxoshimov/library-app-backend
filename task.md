@@ -51,3 +51,20 @@
 ### Migration to TS
 1. Nestjsga ogirish
 	- permission based
+
+### Ball tizimga o'tish
+1. Ball +
+	- qo'shilganda
+	- kitobni topshirganda
+	- qo'lda
+2. Ball -
+	- kitob kechiktirilganda har bir kuniga kitobning muhimligiga qarab
+	- qoidalarni buzganda
+	- qo'lda
+3. Ball bilan tekshirish joylar
+	- kitob olayotganda 
+	- har bir kitobni balli bo'ladi bu narx + tarxidagi zarurlikka qarab bir marta o'rnatib olinadi
+	- blok qilish olib tashlanadi
+		- o'rniga ball bilan tekshiriladi
+		- ball yetsa kitob oladi. Yoki pul to'lab ball olishi mumkin.
+		- pulni olganda pulga mos ball ayirilb tashaladi.
