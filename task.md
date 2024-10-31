@@ -87,3 +87,8 @@
     - rent list filter
     - qidirib ko'rish kerak boshqalarini
 3. rent listga filter qo'shish kerak admin uchun
+
+# Ijaraga berish
+1. eskisni ijaraga berish
+2. Agar stockda muammolar bo'lsa uni chek qo'g'ozlga yozish
+3. Stockdagi muammolarni print qilib yopishtirib qo'yish
