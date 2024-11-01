@@ -93,3 +93,7 @@
 1. eskisni ijaraga berish
 2. Agar stockda muammolar bo'lsa uni chek qo'g'ozlga yozish
 3. Stockdagi muammolarni print qilib yopishtirib qo'yish
+
+# Baza nomlar
+1. Book nomlarini bosh harfini katta qilish. Agar so'zning hammasi kattada bo'lsa Title kase ga ogirish, tutuq belgi vahakzaolarni ' almashtirish
+2. Kitobxon nomarida ham yuqoridagi amalni bajarish
