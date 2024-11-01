@@ -1,6 +1,7 @@
-# Kechikan ijaralar bilan ishlash
+# Kechikkan ijaralar bilan ishlash
 
 1. Botga ijara olish uchun filter kamanda qo'shish. Oxirigi yuborilgan smsda error bo'lgan ijaralarni olishga.
+2. Ijaralarga telefon qilish uchun imoniyat qo'shish kerak
 
 # Stock uchun holat qo'shish kerak
 
