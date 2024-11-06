@@ -18,13 +18,21 @@ function getObjectAvailable(object) {
 }
 
 const BookOptions = {
-	attributes: ["id", "name", "image", "description", "updatedAt"],
+	attributes: [
+		"id",
+		"name",
+		"image",
+		"description",
+		"updatedAt",
+		"deletedAt",
+	],
 };
 
 module.exports = {
 	getOne(id) {
 		return Book.findByPk(id, {
 			attributes: BookOptions.attributes,
+			paranoid: false,
 			include: [
 				{
 					model: Stock,
