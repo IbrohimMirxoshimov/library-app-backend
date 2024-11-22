@@ -37,7 +37,6 @@ Scene.enter(async (ctx) => {
 		0,
 		2
 	)}******${user.passportId.slice(-1)}</b>
-Holat: <b>${UserStatusTrasnlate[user.status]}</b>
 ${user.balance ? `💳 Balans: <b>${user.balance} so'm</b>` : ""}`;
 
 	const keyboard = Markup.inlineKeyboard([
