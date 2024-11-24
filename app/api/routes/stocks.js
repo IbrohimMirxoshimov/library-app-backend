@@ -10,6 +10,7 @@ module.exports = (app) => {
 
 	route.get("/", StockController.getList());
 	route.get("/:id", middlewares.getOne(Stock));
+	route.post("/download", StockController.download());
 	route.post("/", StockController.add());
 	route.put("/:id", isOwner, StockController.update());
 	route.delete("/:id", middlewares.destroy(Stock));
