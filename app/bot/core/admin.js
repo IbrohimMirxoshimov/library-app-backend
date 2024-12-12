@@ -68,9 +68,9 @@ async function isAdminMiddleware(ctx, next) {
 function adminHandlers(bot) {
 	bot.on(message("photo"), isStaffMiddleware, async (ctx) => {
 		ctx.session.img = ctx.session.img || {};
-		const p = ctx.message.photo;
+		const photo = ctx.message.photo;
 		const file = await ctx.telegram.getFileLink(
-			(p[2] || p[1] || p[0]).file_id
+			(photo[2] || photo[1] || photo[0]).file_id
 		);
 
 		const image_path = join("files", randomUUID() + extname(file.href));
@@ -81,13 +81,13 @@ function adminHandlers(bot) {
 
 		if (ctx.message.reply_to_message) {
 			try {
-				let bookId =
+				const bookId =
 					ctx.message.reply_to_message.reply_markup.inline_keyboard[0][0].callback_data.split(
 						"_"
 					)[1];
 
 				if (bookId) {
-					let [rows] = await Book.update(
+					const [rows] = await Book.update(
 						{
 							image: link,
 						},
