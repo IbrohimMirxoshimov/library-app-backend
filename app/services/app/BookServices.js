@@ -73,7 +73,6 @@ module.exports = {
 					options: {
 						distinct: true,
 						attributes: BookOptions.attributes,
-						logging: true,
 					},
 				},
 				Book,
