@@ -26,7 +26,6 @@
 		"qs": "^6.10.1",
 		"query-string": "^7.0.1",
 		"sequelize": "^6.6.2",
-		"telefile": "^0.1.1",
 		"telegraf": "^4.7.0",
 		"winston": "^3.3.3"
 	}

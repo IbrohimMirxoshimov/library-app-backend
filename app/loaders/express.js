@@ -10,7 +10,7 @@ const webhook = require("../api/routes/webhook");
 
 module.exports = (app) => {
 	// statics
-	app.use("/", express.static(path.resolve("frontend")));
+	app.use("/files", express.static(path.resolve("files")));
 
 	// The magic package that prevents frontend developers going nuts
 	// Alternate description:
@@ -28,14 +28,6 @@ module.exports = (app) => {
 	app.use(config.api.prefix, routes());
 	app.use(config.auth.prefix, auth());
 	app.use(config.WEBHOOK_PREFIX, webhook());
-
-	app.get("*", (req, res, next) => {
-		if (req.accepts("text/html")) {
-			res.sendFile(path.resolve("frontend/index.html"));
-		} else {
-			return next();
-		}
-	});
 
 	/// catch 404 and forward to error handler
 	app.use((req, res, next) => {

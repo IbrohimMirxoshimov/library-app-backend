@@ -1,4 +1,3 @@
-const telefile = require("telefile");
 const { report } = require("../../services/RentServices");
 const { getReportText } = require("../../utils/rent");
 const Book = require("../../database/models/Book");
@@ -6,13 +5,17 @@ const { toMatrix } = require("../../utils/array");
 const { updateLocations, getLocation } = require("../cache");
 const { getBooksWithStocks } = require("../fetch");
 const StatServices = require("../../services/StatServices");
-const { MAIN_BOT_USERNAME, production } = require("../../config");
+const { MAIN_BOT_USERNAME, production, APP_ORIGIN } = require("../../config");
 const Notifications = require("../../services/Notifications");
 const { Telegraf, Context } = require("telegraf");
 const { rentExpiresBulkSms } = require("../../services/Crons");
 const Sms = require("../../database/models/Sms");
 const { SmsStatusEnum } = require("../../constants/mix");
 const SmsBulk = require("../../database/models/SmsBulk");
+const { message } = require("telegraf/filters");
+const downloadFile = require("../../helpers/downloadFile");
+const { join, extname } = require("path");
+const { randomUUID } = require("crypto");
 
 const library_private_group_id = "-1001713623437";
 
@@ -63,13 +66,18 @@ async function isAdminMiddleware(ctx, next) {
  * @param {Telegraf<Context>} bot
  */
 function adminHandlers(bot) {
-	bot.on("photo", async (ctx) => {
+	bot.on(message("photo"), isStaffMiddleware, async (ctx) => {
 		ctx.session.img = ctx.session.img || {};
-		let p = ctx.message.photo;
-		let file = await ctx.telegram.getFileLink(
+		const p = ctx.message.photo;
+		const file = await ctx.telegram.getFileLink(
 			(p[2] || p[1] || p[0]).file_id
 		);
-		let link = await telefile({ url: file.href });
+
+		const image_path = join("files", randomUUID() + extname(file.href));
+
+		await downloadFile(file.href, join(process.env.PWD, image_path));
+
+		const link = `${APP_ORIGIN}/${image_path}`;
 
 		if (ctx.message.reply_to_message) {
 			try {
