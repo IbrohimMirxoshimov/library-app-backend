@@ -5,6 +5,7 @@ const {
 	Rent,
 	Collection,
 } = require("../../database/models");
+const { Sequelize, Op } = require("sequelize");
 const { getListOptions } = require("../../api/middlewares/utils");
 
 function getObjectAvailable(object) {
@@ -57,28 +58,46 @@ module.exports = {
 			getListOptions(
 				query,
 				{
+					search: ({ q }) => {
+						return Sequelize.where(
+							Sequelize.fn(
+								"concat",
+								Sequelize.col("books.name"),
+								Sequelize.col("author.name")
+							),
+							{
+								[Op.iLike]: `%${q}%`,
+							}
+						);
+					},
 					options: {
 						distinct: true,
 						attributes: BookOptions.attributes,
-						include: [
-							{
-								model: Stock,
-								as: "stocks",
-								attributes: ["id", "busy", "locationId"],
-								where: getObjectAvailable({
-									locationId: query.locationId || 1,
-									busy: query.busy,
-								}),
-							},
-							{
-								model: Author,
-								as: "author",
-								attributes: ["name"],
-							},
-						],
+						logging: true,
 					},
 				},
-				Book
+				Book,
+				() => [
+					{
+						model: Stock,
+						as: "stocks",
+						attributes: ["id", "busy", "locationId"],
+						where: getObjectAvailable({
+							locationId: query.locationId || 1,
+							busy: query.busy,
+						}),
+					},
+					{
+						model: Author,
+						as: "author",
+						attributes: ["name"],
+						where: {
+							name: {
+								[Op.not]: null,
+							},
+						},
+					},
+				]
 			)
 		);
 	},
