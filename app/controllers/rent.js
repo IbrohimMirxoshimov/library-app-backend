@@ -12,8 +12,8 @@ const {
 	getRentDurationInDays,
 	getReturningDateIfIsNotWorkingDay,
 } = require("../utils/rent");
-const BLOCKING_LATE_TIME_FROM_LEASED_IN_MS = 90 * 24 * 60 * 60 * 1000;
-const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS = 15 * 24 * 60 * 60 * 1000;
+const BLOCKING_LATE_TIME_FROM_LEASED_IN_MS = 70 * 24 * 60 * 60 * 1000;
+const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS = 10 * 24 * 60 * 60 * 1000;
 async function isRequiredBook(book_id) {
 	return StatServices.getFewBooks({ cached: true }).then((books) =>
 		books.some((book) => book.bookId === book_id)
