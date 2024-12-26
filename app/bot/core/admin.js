@@ -19,6 +19,18 @@ const { randomUUID } = require("crypto");
 
 const library_private_group_id = "-1001713623437";
 
+const imageUploadAuthMiddleware = async (ctx, next) => {
+	const private_chat_id = "-1001639498782";
+
+	const is_member = await ctx.telegram
+		.getChatMember(private_chat_id, ctx.from.id)
+		.catch((e) => undefined);
+
+	if (is_member && is_member.status === "member") {
+		return next();
+	}
+};
+
 /**
  *
  * @param {Telegraf<Context>} ctx
@@ -66,7 +78,7 @@ async function isAdminMiddleware(ctx, next) {
  * @param {Telegraf<Context>} bot
  */
 function adminHandlers(bot) {
-	bot.on(message("photo"), isStaffMiddleware, async (ctx) => {
+	bot.on(message("photo"), imageUploadAuthMiddleware, async (ctx) => {
 		ctx.session.img = ctx.session.img || {};
 		const photo = ctx.message.photo;
 		const file = await ctx.telegram.getFileLink(
