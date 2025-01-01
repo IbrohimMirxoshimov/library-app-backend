@@ -413,19 +413,36 @@ const RentController = {
 				rejected: false,
 			});
 
-			let is_user_blocked = false;
+			let user_blocked_reason = "";
+
+			const very_long_leased =
+				new Date().getTime() - rent.leasedAt.getTime() >
+				BLOCKING_LATE_TIME_FROM_LEASED_IN_MS;
+			const long_late =
+				new Date().getTime() - rent.returningDate.getTime() >
+				BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS;
 
 			// block user
-			if (
-				new Date().getTime() - rent.leasedAt.getTime() >
-					BLOCKING_LATE_TIME_FROM_LEASED_IN_MS ||
-				new Date().getTime() - rent.returningDate.getTime() >
-					BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS
-			) {
-				is_user_blocked = true;
+			if (very_long_leased || long_late) {
+				if (very_long_leased) {
+					user_blocked_reason =
+						"Kitobxon 90 kun muddat kitobni qaytarmagan";
+				}
+				if (long_late) {
+					user_blocked_reason =
+						"Kelishilgan muddatdan 15 kun o'tib ketgan";
+				}
+
+				const customer = await User.findOne({
+					where: {
+						id: body.userId,
+					},
+				});
+
 				await User.update(
 					{
 						status: UserStatus.blocked,
+						blockingReason: `${customer.blockingReason}\n${user_blocked_reason}`,
 					},
 					{
 						where: {
@@ -436,7 +453,7 @@ const RentController = {
 			}
 
 			return res
-				.json({ message: "Updated", is_user_blocked })
+				.json({ message: "Updated", user_blocked_reason })
 				.status(200);
 		} catch (e) {
 			next(e);
