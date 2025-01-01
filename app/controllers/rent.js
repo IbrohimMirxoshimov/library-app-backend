@@ -413,7 +413,12 @@ const RentController = {
 				rejected: false,
 			});
 
-			let user_blocked_reason = "";
+			const customer = await User.findOne({
+				where: {
+					id: body.userId,
+				},
+				attributes: ["id", "blockingReason"],
+			});
 
 			const very_long_leased =
 				new Date().getTime() - rent.leasedAt.getTime() >
@@ -425,24 +430,18 @@ const RentController = {
 			// block user
 			if (very_long_leased || long_late) {
 				if (very_long_leased) {
-					user_blocked_reason =
-						"Kitobxon 90 kun muddat kitobni qaytarmagan";
+					customer.blockingReason +=
+						"\nKitobxon 90 kun muddat kitobni qaytarmagan";
 				}
 				if (long_late) {
-					user_blocked_reason =
-						"Kelishilgan muddatdan 15 kun o'tib ketgan";
+					user_blocked_reason +=
+						"\nKelishilgan muddatdan 15 kun o'tib ketgan";
 				}
-
-				const customer = await User.findOne({
-					where: {
-						id: body.userId,
-					},
-				});
 
 				await User.update(
 					{
 						status: UserStatus.blocked,
-						blockingReason: `${customer.blockingReason}\n${user_blocked_reason}`,
+						blockingReason: customer.blockingReason,
 					},
 					{
 						where: {
@@ -453,7 +452,10 @@ const RentController = {
 			}
 
 			return res
-				.json({ message: "Updated", user_blocked_reason })
+				.json({
+					message: "Updated",
+					user_blocked_reason: customer.blockingReason,
+				})
 				.status(200);
 		} catch (e) {
 			next(e);
