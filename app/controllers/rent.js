@@ -41,7 +41,8 @@ function canGetMoreRents(active_rents_count, leased_rents) {
 	];
 
 	return strategy.some(
-		(s) => s.max_actives > active_rents_count && s.min_leases <= leased_rents
+		(s) =>
+			s.max_actives > active_rents_count && s.min_leases <= leased_rents
 	);
 }
 
@@ -110,7 +111,10 @@ async function canGetMoreRentStrategy(stock, userId) {
 	// reject qiligan ijara borlikka tekshiramiz
 	for (const active_rent of active_rents) {
 		if (active_rent.rejected) {
-			throw HttpError(400, "Kitobxonda umuman qaytarilmagan kitob mavjud");
+			throw HttpError(
+				400,
+				"Kitobxonda umuman qaytarilmagan kitob mavjud"
+			);
 		}
 	}
 
@@ -118,7 +122,8 @@ async function canGetMoreRentStrategy(stock, userId) {
 	for (const active_rent of active_rents) {
 		// if required
 		if (await isRequiredBook(active_rent.stock.bookId)) {
-			if ((await isUserVerified(userId)) && active_rents_count < 5) return;
+			if ((await isUserVerified(userId)) && active_rents_count < 5)
+				return;
 			throw HttpError(
 				400,
 				"Qo'shimcha kitob sifatida berilmaydi. Zarur kitoblar ro'yxatiga kiritilgan!"
@@ -196,11 +201,20 @@ const RentController = {
 								Sequelize.fn(
 									"concat",
 									"i",
-									Sequelize.cast(Sequelize.col("rent.id"), "varchar"),
+									Sequelize.cast(
+										Sequelize.col("rent.id"),
+										"varchar"
+									),
 									"c",
-									Sequelize.cast(Sequelize.col("customId"), "varchar"),
+									Sequelize.cast(
+										Sequelize.col("customId"),
+										"varchar"
+									),
 									"u",
-									Sequelize.cast(Sequelize.col("user.id"), "varchar"),
+									Sequelize.cast(
+										Sequelize.col("user.id"),
+										"varchar"
+									),
 									".",
 									Sequelize.col("user.firstName"),
 									Sequelize.col("user.lastName"),
@@ -209,9 +223,15 @@ const RentController = {
 									"p",
 									Sequelize.col("user.extraPhone"),
 									"s",
-									Sequelize.cast(Sequelize.col("stockId"), "varchar"),
+									Sequelize.cast(
+										Sequelize.col("stockId"),
+										"varchar"
+									),
 									"b",
-									Sequelize.cast(Sequelize.col("stock.bookId"), "varchar"),
+									Sequelize.cast(
+										Sequelize.col("stock.bookId"),
+										"varchar"
+									),
 									"."
 								),
 								{
@@ -324,7 +344,9 @@ const RentController = {
 			await canGetMoreRentStrategy(stock, req.body.userId);
 
 			// modify for working days
-			req.body.returningDate = getReturningDateIfIsNotWorkingDay(req.body);
+			req.body.returningDate = getReturningDateIfIsNotWorkingDay(
+				req.body
+			);
 
 			// make stock busy
 			await Stock.update(
@@ -413,7 +435,9 @@ const RentController = {
 				);
 			}
 
-			return res.json({ message: "Updated", is_user_blocked }).status(200);
+			return res
+				.json({ message: "Updated", is_user_blocked })
+				.status(200);
 		} catch (e) {
 			next(e);
 		}
@@ -497,14 +521,17 @@ const RentController = {
 
 			if (req.body.returningDate) {
 				// modify for working days
-				req.body.returningDate = getReturningDateIfIsNotWorkingDay(req.body);
+				req.body.returningDate = getReturningDateIfIsNotWorkingDay(
+					req.body
+				);
 			}
 
 			const result = await Rent.update(req.body, {
 				where: { id: req.params.id },
 			});
 
-			if (!result[0]) return res.json({ message: "Not found" }).status(404);
+			if (!result[0])
+				return res.json({ message: "Not found" }).status(404);
 
 			if (req.body.returningDate) {
 				await Comment.create({
