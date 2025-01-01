@@ -87,7 +87,7 @@ FROM users
 RIGHT JOIN rents
 ON users.id = rents."userId"
 WHERE rents.rejected = false 
-EXTRACT(EPOCH FROM (rents."returnedAt" - rents."leasedAt")) / 3600 > 12;
+and EXTRACT(EPOCH FROM (rents."returnedAt" - rents."leasedAt")) / 3600 > 12
 and rents."returnedAt" between :from and :untill
 and rents."deletedAt" is null 
 GROUP BY users.id
