@@ -87,6 +87,7 @@ FROM users
 RIGHT JOIN rents
 ON users.id = rents."userId"
 WHERE rents.rejected = false 
+and TIMESTAMPDIFF(HOUR, rents."leasedAt", rents."returnedAt") > 12
 and rents."returnedAt" between :from and :untill
 and rents."deletedAt" is null 
 GROUP BY users.id
