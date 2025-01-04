@@ -415,7 +415,7 @@ const RentController = {
 
 			const customer = await User.findOne({
 				where: {
-					id: body.userId,
+					id: rent.userId,
 				},
 				attributes: ["id", "blockingReason"],
 			});
@@ -434,7 +434,7 @@ const RentController = {
 						"\nKitobxon 90 kun muddat kitobni qaytarmagan";
 				}
 				if (long_late) {
-					user_blocked_reason +=
+					customer.blockingReason +=
 						"\nKelishilgan muddatdan 15 kun o'tib ketgan";
 				}
 
