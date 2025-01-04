@@ -445,7 +445,7 @@ const RentController = {
 					},
 					{
 						where: {
-							id: rent.userId,
+							id: req.body.userId,
 						},
 					}
 				);
