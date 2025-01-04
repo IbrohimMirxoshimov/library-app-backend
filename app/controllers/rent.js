@@ -415,7 +415,7 @@ const RentController = {
 
 			const customer = await User.findOne({
 				where: {
-					id: body.userId,
+					id: req.body.userId,
 				},
 				attributes: ["id", "blockingReason"],
 			});
