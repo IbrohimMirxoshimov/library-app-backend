@@ -12,8 +12,12 @@ const {
 	getRentDurationInDays,
 	getReturningDateIfIsNotWorkingDay,
 } = require("../utils/rent");
-const BLOCKING_LATE_TIME_FROM_LEASED_IN_MS = 70 * 24 * 60 * 60 * 1000;
-const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS = 10 * 24 * 60 * 60 * 1000;
+const BLOCKING_LATE_TIME_FROM_LEASED_IN_DAYS = 70;
+const BLOCKING_LATE_TIME_FROM_LEASED_IN_MS =
+	BLOCKING_LATE_TIME_FROM_LEASED_IN_DAYS * 24 * 60 * 60 * 1000;
+const BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS = 10;
+const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS =
+	BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS * 24 * 60 * 60 * 1000;
 async function isRequiredBook(book_id) {
 	return StatServices.getFewBooks({ cached: true }).then((books) =>
 		books.some((book) => book.bookId === book_id)
@@ -430,12 +434,14 @@ const RentController = {
 			// block user
 			if (very_long_leased || long_late) {
 				if (very_long_leased) {
-					customer.blockingReason +=
-						"\nKitobxon 90 kun muddat kitobni qaytarmagan";
+					customer.blockingReason =
+						(customer.blockingReason || "") +
+						`Kitobxon ${BLOCKING_LATE_TIME_FROM_LEASED_IN_DAYS} kun muddat kitobni qaytarmagan\n`;
 				}
 				if (long_late) {
-					customer.blockingReason +=
-						"\nKelishilgan muddatdan 15 kun o'tib ketgan";
+					customer.blockingReason =
+						(customer.blockingReason || "") +
+						`Kelishilgan muddatdan ${BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS} kun o'tib ketgan\n`;
 				}
 
 				await User.update(
