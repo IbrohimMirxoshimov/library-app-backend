@@ -15,7 +15,10 @@ const User = sequelize.define(
 		fullName: {
 			type: DataTypes.STRING,
 			set(val) {
-				this.setDataValue("fullName", this.firstName + " " + this.lastName);
+				this.setDataValue(
+					"fullName",
+					this.firstName + " " + this.lastName
+				);
 			},
 		},
 		username: {
@@ -66,8 +69,10 @@ const User = sequelize.define(
 			validate: {
 				isDate: true,
 				isBefore: {
-					msg: "Juda yosh",
-					args: "2015-01-01",
+					msg: "5 yoshdan kichik bo'lmasligi kerak",
+					args: new Date(new Date().getFullYear() - 5, 0, 1)
+						.toISOString()
+						.slice(0, 10),
 				},
 			},
 		},
