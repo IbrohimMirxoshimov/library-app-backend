@@ -39,6 +39,9 @@ module.exports = {
 					model: Stock,
 					as: "stocks",
 					attributes: ["id", "busy", "locationId"],
+					where: {
+						locationId: 1,
+					},
 				},
 				{
 					model: Author,
