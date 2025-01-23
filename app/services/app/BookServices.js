@@ -94,7 +94,7 @@ module.exports = {
 						as: "author",
 						attributes: ["name"],
 						where: {
-							name: {
+							id: {
 								[Op.not]: null,
 							},
 						},
