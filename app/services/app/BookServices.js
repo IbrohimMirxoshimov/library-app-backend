@@ -111,7 +111,7 @@ module.exports = {
 				rejected: false,
 				deletedAt: null,
 			},
-			limit: 30,
+			limit: 100,
 			include: [
 				{
 					model: Stock,
