@@ -20,6 +20,7 @@ const { randomUUID } = require("crypto");
 const library_private_group_id = "-1001713623437";
 
 const imageUploadAuthMiddleware = async (ctx, next) => {
+	// Sayfa app kanali. Sababi shu kanalda a'zoli ham rasmni o'zgaritirsh huquqini berish kerak
 	const private_chat_id = "-1001639498782";
 
 	const is_member = await ctx.telegram
