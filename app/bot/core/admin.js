@@ -27,7 +27,12 @@ const imageUploadAuthMiddleware = async (ctx, next) => {
 		.getChatMember(private_chat_id, ctx.from.id)
 		.catch((e) => undefined);
 
-	if (is_member && is_member.status === "member") {
+	if (
+		is_member &&
+		(is_member.status === "administrator" ||
+			is_member.status === "creator" ||
+			is_member.status === "member")
+	) {
 		return next();
 	}
 };
