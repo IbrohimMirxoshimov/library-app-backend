@@ -73,6 +73,10 @@ function getListOptions(
 const StockController = {
 	add: () => async (req, res, next) => {
 		try {
+			if (!req.body.bookId) {
+				throw HttpError(400, "bookId required");
+			}
+
 			let result = await Stock.create({
 				...req.body,
 				locationId: req.user.libraryId || 1,
