@@ -20,7 +20,7 @@ module.exports = (app) => {
 	app.use("/books", middlewares.isAuth, route);
 
 	route.get("/", middlewares.getList(Book));
-	route.get("/:id", isModerator, middlewares.getOne(Book));
+	route.get("/:id", middlewares.getOne(Book));
 	route.post(
 		"/",
 		isModerator,
