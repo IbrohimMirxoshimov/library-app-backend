@@ -10,8 +10,8 @@ const SmsProviderType = {
 };
 const SmsStatusEnum = {
 	draft: "draft",
-	pending: "pending",
-	done: "done",
+	sent: "sent",
+	delivered: "delivered",
 	error: "error",
 };
 module.exports = {

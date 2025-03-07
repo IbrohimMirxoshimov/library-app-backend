@@ -196,7 +196,7 @@ function adminHandlers(bot) {
 							smsbulkId: smsBulk.id,
 							status: [
 								SmsStatusEnum.error,
-								SmsStatusEnum.pending,
+								SmsStatusEnum.sent,
 							],
 						},
 						raw: true,
