@@ -124,6 +124,7 @@ module.exports = (app) => {
 						smsbulkId: smsbulk.id,
 						userId: req.user.id,
 						locationId: req.user.locationId,
+						text: text,
 					});
 				}
 
