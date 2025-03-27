@@ -8,7 +8,7 @@ const { isLibrarian, isOwner } = require("../middlewares/permissions");
 const { getListOptions } = require("../middlewares/utils");
 const StatServices = require("../../services/StatServices");
 const { sendBatchSmsViaEskiz } = require("../../helpers/SmsProviderApi");
-const { SmsProviderType } = require("../../constants/mix");
+const { SmsProviderType, SmsStatusEnum } = require("../../constants/mix");
 const HttpError = require("../../utils/HttpError");
 const route = Router();
 
@@ -216,7 +216,7 @@ module.exports = (app) => {
 	route.delete("/messages/:id", middlewares.destroy(Sms));
 };
 
-async function customMessagesByJson(req, res, next) {
+async function customMessagesByJson(req, res) {
 	if (!req.user.owner) {
 		throw HttpError(403);
 	}
@@ -247,38 +247,36 @@ async function customMessagesByJson(req, res, next) {
 		userId: librarian.id,
 	});
 
-	await sendBatchSmsViaEskiz({
-		messages: message_and_phone_data,
-		message_text_limit: 1000,
-	})
-		.then(async (messages) => {
-			res.status(200).json({
-				message: "success",
-			});
-			await Sms.bulkCreate(
-				messages.map((message) => {
-					return {
-						phone: message.to,
-						userId: librarian.id,
-						text: message.text,
-						provider: SmsProviderType.eskiz,
-						provider_message_id: message.user_sms_id,
-						smsbulkId: smsbulk.id,
-						error_reason: message.error_reason,
-						status: message.error_reason ? "error" : "pending",
-					};
-				})
-			);
-		})
-		.catch(async (error) => {
-			console.error(error);
-			next(error);
-			await Sms.create({
-				phone: "ERROR",
+	// await sendBatchSmsViaEskiz({
+	// 	messages: message_and_phone_data,
+	// 	message_text_limit: 1000,
+	// })
+	// 	.then(async (messages) => {
+
+	await Sms.bulkCreate(
+		message_and_phone_data.map((message) => {
+			return {
+				phone: message.phone_number,
 				userId: librarian.id,
+				text: message.text,
 				smsbulkId: smsbulk.id,
-				error_reason: error.message,
-				status: "error",
-			});
-		});
+				status: SmsStatusEnum.draft,
+			};
+		})
+	);
+	res.status(200).json({
+		message: "success",
+	});
+	// })
+	// .catch(async (error) => {
+	// 	console.error(error);
+	// 	next(error);
+	// 	await Sms.create({
+	// 		phone: "ERROR",
+	// 		userId: librarian.id,
+	// 		smsbulkId: smsbulk.id,
+	// 		error_reason: error.message,
+	// 		status: "error",
+	// 	});
+	// });
 }
