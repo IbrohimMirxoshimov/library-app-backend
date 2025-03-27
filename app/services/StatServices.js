@@ -82,6 +82,7 @@ LIMIT :size`,
 					'"lastName"',
 					"count(rents.id)",
 					"users.id as user_id",
+					"gender",
 				].join(", ")}
 FROM users
 RIGHT JOIN rents
