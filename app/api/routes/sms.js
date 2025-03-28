@@ -217,10 +217,6 @@ module.exports = (app) => {
 };
 
 async function customMessagesByJson(req, res) {
-	if (!req.user.owner) {
-		throw HttpError(403);
-	}
-
 	/**
 	 * @type {{text: string, phone_number: string}[]}
 	 */
@@ -235,7 +231,7 @@ async function customMessagesByJson(req, res) {
 		)
 		.validate(message_and_phone_data);
 
-	if (validated.error) {
+	if (validated.error || message_and_phone_data.length > 500) {
 		throw new Error(validated.error.message);
 	}
 
