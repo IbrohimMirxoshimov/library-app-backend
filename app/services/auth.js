@@ -4,6 +4,7 @@ const HttpError = require("../utils/HttpError");
 const { verifyCode } = require("./Verification");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
+const Location = require("../database/models/Location.js");
 const EXPIRE_TIME_TOKEN = 1000 * 60 * 60 * 24 * 12;
 
 function generateToken(user) {
@@ -44,10 +45,20 @@ module.exports = {
 		if (!userRecord) throw HttpError(403);
 
 		const validPassword =
-			userRecord.password === password || userRecord.passportId === password;
+			userRecord.password === password ||
+			userRecord.passportId === password;
 
 		if (validPassword) {
-			let user = { ...userRecord };
+			const user = { ...userRecord };
+
+			// If user is librarian, fetch library object and add to user
+			if (user.librarian && user.libraryId) {
+				const libraryObj = await Location.findOne({
+					where: { id: user.libraryId },
+					raw: true,
+				});
+				user.library = libraryObj;
+			}
 
 			return {
 				user: getAttributesByPermission(user),
