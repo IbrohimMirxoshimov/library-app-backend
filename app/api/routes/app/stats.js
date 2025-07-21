@@ -15,6 +15,10 @@ module.exports = (app) => {
 		}
 	);
 	app.get("/stats", async (req, res) => {
-		res.status(200).json(await StatServices.getStats());
+		const libraryId = req.headers["library"]
+			? Number(req.headers["library"])
+			: 1;
+
+		res.status(200).json(await StatServices.getStats(libraryId));
 	});
 };

@@ -375,7 +375,6 @@ const Crons = {
 		this.mainChannelNotifications.lastWeekStats();
 		this.rentExpiresBulkSmsCron();
 		this.superAdminNotifications();
-		StatServices.setCachingStatsCron();
 	},
 };
 

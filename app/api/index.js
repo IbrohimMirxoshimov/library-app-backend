@@ -15,6 +15,7 @@ const news = require("./routes/news");
 const verification = require("./routes/verification");
 const sms = require("./routes/sms");
 const towns = require("./routes/towns");
+const stats = require("./routes/stats");
 
 module.exports = () => {
 	const main = Router();
@@ -34,7 +35,8 @@ module.exports = () => {
 	news(main);
 	verification(main);
 	sms(main);
-	towns(main)
+	towns(main);
+	stats(main);
 
 	return main;
 };

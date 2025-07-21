@@ -10,6 +10,7 @@ const {
 const { Op } = require("sequelize");
 const User = require("../database/models/User");
 const Stock = require("../database/models/Stock");
+const { production } = require("../config");
 
 const StatServices = {
 	async getTopReadingBooks(
@@ -71,7 +72,7 @@ LIMIT :size`,
 		});
 	},
 	/**
-	 * @param {{ from?: Date, untill?: Date, select?: string[], size?: number }} filter
+	 * @param {{ from?: Date, untill?: Date, select?: string[], size?: number, locationId: number }} filter
 	 * @returns
 	 */
 	async getTopReaders(filter = {}) {
@@ -80,18 +81,19 @@ LIMIT :size`,
 				`SELECT ${[
 					...(filter.select || []),
 					'"lastName"',
-					"count(rents.id)",
+					"count(rents.id) as count",
 					"users.id as user_id",
 					"gender",
 				].join(", ")}
 FROM users
-RIGHT JOIN rents
-ON users.id = rents."userId"
-WHERE rents.rejected = false 
-and EXTRACT(EPOCH FROM (rents."returnedAt" - rents."leasedAt")) / 3600 > 12
-and rents."returnedAt" between :from and :untill
-and rents."deletedAt" is null 
-GROUP BY users.id
+INNER JOIN rents ON users.id = rents."userId"
+INNER JOIN stocks ON stocks.id = rents."stockId" AND stocks."locationId" = :locationId
+WHERE 
+  rents.rejected = false 
+  AND EXTRACT(EPOCH FROM (rents."returnedAt" - rents."leasedAt")) / 3600 > 12
+  AND rents."returnedAt" BETWEEN :from AND :untill
+  AND rents."deletedAt" IS NULL
+GROUP BY users.id${filter.select ? ", " + filter.select.join(", ") : ""}
 ORDER BY count DESC 
 LIMIT :size`,
 				{
@@ -99,16 +101,18 @@ LIMIT :size`,
 						from: filter.from || new Date(2020),
 						untill: filter.untill || new Date(),
 						size: filter.size || 10,
+						locationId: filter.locationId,
 					},
 				}
 			)
 		)[0];
 	},
-	async getStatsFromDB(locationId = 1) {
+	async getStatsFromDB(locationId) {
 		// top librarian
 		// LEFT(users."firstName",1) as "firstName",
 		const top_librarians = await this.getTopReaders({
 			size: 30,
+			locationId: locationId,
 		});
 
 		// gender
@@ -294,22 +298,36 @@ LIMIT :size`,
 			few_books: few_books,
 		};
 	},
-	cached_path: path.resolve(__dirname, "../../data.json"),
-	async cacheStats() {
-		let stats = await this.getStatsFromDB();
-		await fs.writeFile(this.cached_path, JSON.stringify(stats));
+	getCachedPath(libraryId = 1) {
+		return path.resolve(__dirname, `../../files/stats-${libraryId}.json`);
 	},
-	async getStats() {
-		return fs
-			.readFile(this.cached_path)
-			.then((data) => JSON.parse(data.toString()));
+
+	async isExpired(filePath, hours = 5) {
+		try {
+			const stat = await fs.stat(filePath);
+			const now = Date.now();
+			const mtime = new Date(stat.mtime).getTime();
+			const expiration = hours * 60 * 60 * 1000;
+			return now - mtime >= expiration;
+		} catch (err) {
+			// If file does not exist or error, treat as expired
+			return true;
+		}
 	},
-	setCachingStatsCron() {
-		const CACHE_UPDATE_TIME = 1000 * 60 * 60 * 4;
-		// this.cacheStats().catch(console.error);
-		setInterval(() => {
-			this.cacheStats().catch(console.error);
-		}, CACHE_UPDATE_TIME);
+
+	async getStats(libraryId = 1) {
+		const cachedPath = this.getCachedPath(libraryId);
+
+		const expired = production ? await this.isExpired(cachedPath, 5) : true;
+
+		if (!expired) {
+			const cached = await fs.readFile(cachedPath);
+			return JSON.parse(cached.toString());
+		} else {
+			const stats = await this.getStatsFromDB(libraryId);
+			await fs.writeFile(cachedPath, JSON.stringify(stats));
+			return stats;
+		}
 	},
 	getNewUsersCount({
 		locationId = 1,

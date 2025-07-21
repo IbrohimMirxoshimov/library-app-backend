@@ -180,6 +180,7 @@ Alhamdulillah!
 			const stats = await StatServices.getTopReaders({
 				from: dateRangePrevMonth.first,
 				untill: dateRangePrevMonth.last,
+				locationId: 1,
 			});
 
 			return this.generateTopReadersStat(stats, dateRangePrevMonth.first);
