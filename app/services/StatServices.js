@@ -119,15 +119,25 @@ LIMIT :size`,
 		const [gender] = await sequelize.query(
 			`SELECT users.gender, count(users.id)
 			FROM users
-			WHERE users.phone is not null and users.gender is not null
-			GROUP BY users.gender`
+			WHERE users.phone is not null and users.gender is not null and users."locationId" = :locationId
+			GROUP BY users.gender`,
+			{
+				replacements: {
+					locationId: locationId,
+				},
+			}
 		);
 
 		// librarians
 		const [[{ count: librarians_count }]] = await sequelize.query(
 			`SELECT count(users.id)
 			FROM users
-			WHERE users.phone is not null`
+			WHERE users.phone is not null and users."locationId" = :locationId`,
+			{
+				replacements: {
+					locationId: locationId,
+				},
+			}
 		);
 
 		// books count
@@ -149,7 +159,13 @@ LIMIT :size`,
 		const [[{ count: reading_books_count }]] = await sequelize.query(
 			`SELECT count(rents.id)
 			FROM rents
-			WHERE rents."returnedAt" is null and rents."deletedAt" is null and rents.rejected = false`
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."returnedAt" is null and rents."deletedAt" is null and rents.rejected = false and stocks."locationId" = :locationId`,
+			{
+				replacements: {
+					locationId: locationId,
+				},
+			}
 		);
 
 		// expired leases
@@ -168,9 +184,11 @@ LIMIT :size`,
 		// avarage count dayly leasing books of last month
 		const [[{ count: dayly_leasing_books_avarage_count_of_last_month }]] =
 			await sequelize.query(
-				`SELECT count(id) FROM "rents"
-			WHERE "deletedAt" IS NULL
-			AND ("createdAt" BETWEEN ${pgFormatDate(
+				`SELECT count(rents.id) FROM "rents"
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."deletedAt" IS NULL
+			AND stocks."locationId" = ${locationId}
+			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				getOneMonthBackDate()
 			)} AND ${pgFormatDate(new Date())})`
 			);
@@ -178,9 +196,11 @@ LIMIT :size`,
 		// leased_books_count_of_last_month
 		const [[{ count: leased_books_count_of_last_month }]] =
 			await sequelize.query(
-				`SELECT count(id) FROM "rents"
-			WHERE "deletedAt" IS NULL
-			AND ("createdAt" BETWEEN ${pgFormatDate(
+				`SELECT count(rents.id) FROM "rents"
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."deletedAt" IS NULL
+			AND stocks."locationId" = ${locationId}
+			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				getOneMonthBackDate()
 			)} AND ${pgFormatDate(new Date())})`
 			);
@@ -188,9 +208,11 @@ LIMIT :size`,
 		// leased_books_count_of_last_week
 		const [[{ count: leased_books_count_of_last_week }]] =
 			await sequelize.query(
-				`SELECT count(id) FROM "rents"
-			WHERE "deletedAt" IS NULL
-			AND ("createdAt" BETWEEN ${pgFormatDate(
+				`SELECT count(rents.id) FROM "rents"
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."deletedAt" IS NULL
+			AND stocks."locationId" = ${locationId}
+			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				new Date(Date.now() - 1000 * 60 * 60 * 24 * 7)
 			)} AND ${pgFormatDate(new Date())})`
 			);
@@ -198,9 +220,11 @@ LIMIT :size`,
 		// leased_books_count_of_last_24_hours
 		const [[{ count: leased_books_count_of_last_24_hours }]] =
 			await sequelize.query(
-				`SELECT count(id) FROM "rents"
-			WHERE "deletedAt" IS NULL
-			AND ("createdAt" BETWEEN ${pgFormatDate(
+				`SELECT count(rents.id) FROM "rents"
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."deletedAt" IS NULL
+			AND stocks."locationId" = ${locationId}
+			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				new Date(Date.now() - 1000 * 60 * 60 * 24)
 			)} AND ${pgFormatDate(new Date())})`
 			);
@@ -219,49 +243,43 @@ LIMIT :size`,
 			getOneWeekBackDate()
 		);
 
-		const one_month_leased_rents_by_day = await Rent.findAll({
-			attributes: [
-				[
-					sequelize.fn(
-						"date_trunc",
-						"day",
-						sequelize.col("createdAt")
-					),
-					"day",
-				],
-				[sequelize.literal(`COUNT(id)`), "count"],
-			],
-			where: {
-				createdAt: {
-					[Op.between]: [getOneMonthBackDate(), new Date()],
+		const [one_month_leased_rents_by_day] = await sequelize.query(
+			`SELECT 
+				date_trunc('day', rents."createdAt") as day,
+				COUNT(rents.id) as count
+			FROM rents
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."createdAt" BETWEEN :fromDate AND :untillDate
+			AND stocks."locationId" = :locationId
+			GROUP BY day
+			ORDER BY day ASC`,
+			{
+				replacements: {
+					fromDate: getOneMonthBackDate(),
+					untillDate: new Date(),
+					locationId: locationId,
 				},
-			},
-			raw: true,
-			group: ["day"],
-			order: [[sequelize.literal("day"), "ASC"]],
-		});
+			}
+		);
 
-		const one_month_returned_rents_by_day = await Rent.findAll({
-			attributes: [
-				[
-					sequelize.fn(
-						"date_trunc",
-						"day",
-						sequelize.col("returnedAt")
-					),
-					"day",
-				],
-				[sequelize.literal(`COUNT(id)`), "count"],
-			],
-			where: {
-				returnedAt: {
-					[Op.between]: [getOneMonthBackDate(), new Date()],
+		const [one_month_returned_rents_by_day] = await sequelize.query(
+			`SELECT 
+				date_trunc('day', rents."returnedAt") as day,
+				COUNT(rents.id) as count
+			FROM rents
+			INNER JOIN stocks ON stocks.id = rents."stockId"
+			WHERE rents."returnedAt" BETWEEN :fromDate AND :untillDate
+			AND stocks."locationId" = :locationId
+			GROUP BY day
+			ORDER BY day ASC`,
+			{
+				replacements: {
+					fromDate: getOneMonthBackDate(),
+					untillDate: new Date(),
+					locationId: locationId,
 				},
-			},
-			raw: true,
-			group: ["day"],
-			order: [[sequelize.literal("day"), "ASC"]],
-		});
+			}
+		);
 
 		const few_books = await this.getFewBooks({ locationId });
 
@@ -365,9 +383,10 @@ LIMIT :size`,
 				},
 				// paranoid: false,
 			},
+			limit: 100,
 		});
 
-		const required_books = (
+		const [required_books] =
 			await sequelize.query(`SELECT count(s."bookId") total, s."bookId", b.name, sum(s.busy::int) busies 
 		FROM stocks s
 		INNER JOIN books b
@@ -379,8 +398,7 @@ LIMIT :size`,
 			or (count("bookId") > 3 AND count("bookId") - sum(busy::int) = 1) 
 			or (count("bookId") > 5 AND (count("bookId") - sum(busy::int) < 4))
 		ORDER BY total DESC
-		LIMIT 120`)
-		)[0];
+		LIMIT 100`);
 
 		const ids = required_books.map((b) => b.bookId);
 
