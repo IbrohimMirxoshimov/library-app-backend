@@ -2,7 +2,8 @@ const { Sequelize, Op } = require("sequelize");
 const { getListOptions } = require("../api/middlewares/utils");
 const { DEV_ID } = require("../config");
 const UserStatus = require("../constants/UserStatus");
-const { Rent, Stock, User, Book, Comment } = require("../database/models");
+const db = require("../database/models");
+const { Rent, Stock, User, Book, Comment } = db;
 const { sendMessageFromTelegramBot } = require("../services/Notifications");
 const { report } = require("../services/RentServices");
 const StatServices = require("../services/StatServices");
@@ -303,6 +304,8 @@ const RentController = {
 		}
 	},
 	add: () => async (req, res, next) => {
+		const transaction = await db.sequelize.transaction();
+		
 		try {
 			if (req.body.returnedAt) throw HttpError(400);
 			if (req.body.returningDate < req.body.leasedAt)
@@ -320,6 +323,7 @@ const RentController = {
 					busy: false,
 				},
 				paranoid: false,
+				transaction
 			});
 
 			if (!stock) throw HttpError(400, "Kitob mavjud emas yoki nofaol!");
@@ -361,6 +365,7 @@ const RentController = {
 						locationId: req.user.libraryId,
 						busy: false,
 					},
+					transaction
 				}
 			);
 
@@ -379,14 +384,19 @@ const RentController = {
 				}\n${stock.book.name}`
 			).catch((e) => console.error(e));
 
-			const result = await Rent.create(req.body);
+			const result = await Rent.create(req.body, { transaction });
+
+			await transaction.commit();
 
 			return res.json(result.toJSON()).status(201);
 		} catch (e) {
+			await transaction.rollback();
 			next(e);
 		}
 	},
 	return: () => async (req, res, next) => {
+		const transaction = await db.sequelize.transaction();
+		
 		try {
 			const rent = await Rent.findByPk(parseInt(req.params.id), {
 				include: {
@@ -398,6 +408,7 @@ const RentController = {
 					paranoid: false,
 				},
 				paranoid: false,
+				transaction
 			});
 
 			if (!rent || rent.returnedAt) throw HttpError(404);
@@ -409,19 +420,21 @@ const RentController = {
 						id: rent.stock.id,
 					},
 					paranoid: false,
+					transaction
 				}
 			);
 
 			await rent.update({
 				returnedAt: new Date(),
 				rejected: false,
-			});
+			}, { transaction });
 
 			const customer = await User.findOne({
 				where: {
 					id: rent.userId,
 				},
 				attributes: ["id", "blockingReason"],
+				transaction
 			});
 
 			const very_long_leased =
@@ -453,9 +466,12 @@ const RentController = {
 						where: {
 							id: rent.userId,
 						},
+						transaction
 					}
 				);
 			}
+
+			await transaction.commit();
 
 			return res
 				.json({
@@ -464,6 +480,7 @@ const RentController = {
 				})
 				.status(200);
 		} catch (e) {
+			await transaction.rollback();
 			next(e);
 		}
 	},
