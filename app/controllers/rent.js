@@ -194,6 +194,49 @@ async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 	throw HttpError(400, "Kutilmagan xatolik");
 }
 
+async function checkToAdd(req) {
+	if (req.body.returnedAt) throw HttpError(400);
+	if (req.body.returningDate < req.body.leasedAt)
+		throw HttpError(400, "Sana to'g'ri emas");
+
+	const stock = await Stock.findOne({
+		include: {
+			model: Book,
+			as: "book",
+			paranoid: false,
+		},
+		where: {
+			id: req.body.stockId,
+			locationId: req.user.libraryId,
+			busy: false,
+		},
+		paranoid: false,
+	});
+
+	if (!stock) throw HttpError(400, "Kitob mavjud emas yoki nofaol!");
+
+	await canUserGetRent(req.body.userId, req.user.libraryId, stock.book.price);
+
+	// * Check max rent duration
+	// temporary only location id is 1
+	// should add check duration feature to location and we can use it here
+	if (stock.locationId === 1) {
+		const duration_day = getRentDurationInDays(req.body);
+
+		if (duration_day >= stock.book.rentDuration + 1) {
+			throw HttpError(
+				400,
+				`Berilmaydi. Eng ko'p o'qish muddati: ${stock.book.rentDuration} kun`
+			);
+		}
+	}
+
+	// Does user can get more books
+	await canGetMoreRentStrategy(stock, req.body.userId);
+
+	return stock;
+}
+
 const RentController = {
 	getList: () => async (req, res, next) => {
 		try {
@@ -303,54 +346,20 @@ const RentController = {
 			next(e);
 		}
 	},
+	checkToAdd: () => async (req, res, next) => {
+		try {
+			await checkToAdd(req);
+
+			return res.json({ message: "OK" }).status(200);
+		} catch (e) {
+			next(e);
+		}
+	},
 	add: () => async (req, res, next) => {
 		const transaction = await db.sequelize.transaction();
-		
+
 		try {
-			if (req.body.returnedAt) throw HttpError(400);
-			if (req.body.returningDate < req.body.leasedAt)
-				throw HttpError(400, "Sana to'g'ri emas");
-
-			const stock = await Stock.findOne({
-				include: {
-					model: Book,
-					as: "book",
-					paranoid: false,
-				},
-				where: {
-					id: req.body.stockId,
-					locationId: req.user.libraryId,
-					busy: false,
-				},
-				paranoid: false,
-				transaction
-			});
-
-			if (!stock) throw HttpError(400, "Kitob mavjud emas yoki nofaol!");
-
-			await canUserGetRent(
-				req.body.userId,
-				req.user.libraryId,
-				stock.book.price
-			);
-
-			// * Check max rent duration
-			// temporary only location id is 1
-			// should add check duration feature to location and we can use it here
-			if (stock.locationId === 1) {
-				const duration_day = getRentDurationInDays(req.body);
-
-				if (duration_day >= stock.book.rentDuration + 1) {
-					throw HttpError(
-						400,
-						`Berilmaydi. Eng ko'p o'qish muddati: ${stock.book.rentDuration} kun`
-					);
-				}
-			}
-
-			// Does user can get more books
-			await canGetMoreRentStrategy(stock, req.body.userId);
-
+			const stock = await checkToAdd(req);
 			// modify for working days
 			req.body.returningDate = getReturningDateIfIsNotWorkingDay(
 				req.body
@@ -365,17 +374,15 @@ const RentController = {
 						locationId: req.user.libraryId,
 						busy: false,
 					},
-					transaction
+					transaction,
 				}
 			);
 
-			// new feature for users can join any libraries but access to users from admins only be if user joined this admin's library
-			// let user = await User.findByPk(req.body.userId);
-			// if (!user.libraries.includes(req.user.libraryId)) {
-			// 	await user.update({
-			// 		libraries: [...user.libraries, req.user.libraryId],
-			// 	});
-			// }
+			const result = await Rent.create(req.body, { transaction });
+
+			await transaction.commit();
+
+			res.json(result.toJSON()).status(201);
 
 			sendMessageFromTelegramBot(
 				DEV_ID,
@@ -383,12 +390,6 @@ const RentController = {
 					stock.locationId
 				}\n${stock.book.name}`
 			).catch((e) => console.error(e));
-
-			const result = await Rent.create(req.body, { transaction });
-
-			await transaction.commit();
-
-			return res.json(result.toJSON()).status(201);
 		} catch (e) {
 			await transaction.rollback();
 			next(e);
@@ -396,7 +397,7 @@ const RentController = {
 	},
 	return: () => async (req, res, next) => {
 		const transaction = await db.sequelize.transaction();
-		
+
 		try {
 			const rent = await Rent.findByPk(parseInt(req.params.id), {
 				include: {
@@ -408,7 +409,7 @@ const RentController = {
 					paranoid: false,
 				},
 				paranoid: false,
-				transaction
+				transaction,
 			});
 
 			if (!rent || rent.returnedAt) throw HttpError(404);
@@ -420,21 +421,24 @@ const RentController = {
 						id: rent.stock.id,
 					},
 					paranoid: false,
-					transaction
+					transaction,
 				}
 			);
 
-			await rent.update({
-				returnedAt: new Date(),
-				rejected: false,
-			}, { transaction });
+			await rent.update(
+				{
+					returnedAt: new Date(),
+					rejected: false,
+				},
+				{ transaction }
+			);
 
 			const customer = await User.findOne({
 				where: {
 					id: rent.userId,
 				},
 				attributes: ["id", "blockingReason"],
-				transaction
+				transaction,
 			});
 
 			const very_long_leased =
@@ -466,7 +470,7 @@ const RentController = {
 						where: {
 							id: rent.userId,
 						},
-						transaction
+						transaction,
 					}
 				);
 			}
