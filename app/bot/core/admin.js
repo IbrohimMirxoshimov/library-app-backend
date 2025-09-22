@@ -8,7 +8,10 @@ const StatServices = require("../../services/StatServices");
 const { MAIN_BOT_USERNAME, production, APP_ORIGIN } = require("../../config");
 const Notifications = require("../../services/Notifications");
 const { Telegraf, Context } = require("telegraf");
-const { rentExpiresBulkSms } = require("../../services/Crons");
+const {
+	rentExpiresBulkSms,
+	createSmsForExpiredRents,
+} = require("../../services/Crons");
 const Sms = require("../../database/models/Sms");
 const { SmsStatusEnum } = require("../../constants/mix");
 const SmsBulk = require("../../database/models/SmsBulk");
@@ -194,10 +197,7 @@ function adminHandlers(bot) {
 					const smses = await Sms.findAll({
 						where: {
 							smsbulkId: smsBulk.id,
-							status: [
-								SmsStatusEnum.error,
-								SmsStatusEnum.sent,
-							],
+							status: [SmsStatusEnum.error, SmsStatusEnum.sent],
 						},
 						raw: true,
 					});
@@ -259,6 +259,19 @@ function adminHandlers(bot) {
 				});
 
 			return ctx.reply("Sms yuborish boshlandi");
+		})
+		.command("create_sms", async (ctx) => {
+			console.log("create_sms");
+			
+			return createSmsForExpiredRents()
+				.then((r) => {
+					if (r) {
+						return ctx.reply(JSON.stringify(r));
+					}
+				})
+				.catch((e) => {
+					return ctx.reply(`Xatolik: ${e.message}`);
+				});
 		})
 		.command("update_stats", isStaffMiddleware, async (ctx) => {
 			await StatServices.cacheStats();
