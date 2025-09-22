@@ -391,7 +391,7 @@ const Crons = {
 				});
 
 				return {
-					phone_number: `998${phone}`,
+					phone_number: phone,
 					text: text,
 				};
 			});
