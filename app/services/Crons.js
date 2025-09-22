@@ -411,7 +411,6 @@ const Crons = {
 						phone: message.phone_number,
 						userId: mainLibrarianId,
 						text: message.text,
-						provider: SmsProviderType.manual,
 						smsbulkId: smsbulk.id,
 						status: "draft",
 					};
