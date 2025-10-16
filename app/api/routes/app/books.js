@@ -3,7 +3,7 @@ const { Router } = require("express");
 const { Collection, Author } = require("../../../database/models");
 const BookServices = require("../../../services/app/BookServices");
 const { listResponse } = require("../../middlewares/utils");
-
+const HttpError = require("../../../utils/HttpError");
 module.exports = (app) => {
 	const route = Router();
 
@@ -42,7 +42,7 @@ module.exports = (app) => {
 			try {
 				let result = await BookServices.getOne(req.params.id);
 
-				if (!result) return res.json({ message: "Not found" }).status(404);
+				if (!result) throw HttpError(404);
 
 				return res.json(result.toJSON()).status(200);
 			} catch (e) {
@@ -56,13 +56,15 @@ module.exports = (app) => {
 					locationId: Joi.number().required(),
 				}),
 			}),
+
 			async (req, res, next) => {
 				try {
 					let result = await BookServices.getBookStatuses(
 						req.params.id,
 						req.query.locationId
 					);
-					if (!result) return res.json({ message: "Not found" }).status(404);
+
+					if (!result) throw HttpError(404);
 
 					return res.json(result).status(200);
 				} catch (e) {
