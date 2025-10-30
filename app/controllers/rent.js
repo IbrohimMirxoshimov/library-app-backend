@@ -178,7 +178,10 @@ async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 
 	if (user.status === UserStatus.blocked) {
 		if (user.blockingReason) {
-			throw HttpError(400, user.blockingReason);
+			throw HttpError(
+				400,
+				user.blockingReason + `\nKitob ${bookPrice} so'm`
+			);
 		}
 
 		if (user.balance >= bookPrice) {
