@@ -10,6 +10,7 @@ module.exports = (app) => {
 	route
 		.get("/", async (req, res, next) => {
 			const locationId = req.headers["library"];
+
 			try {
 				const { count, rows } = await BookServices.getList(
 					req.query,
@@ -44,6 +45,7 @@ module.exports = (app) => {
 		})
 		.get("/:id", async (req, res, next) => {
 			const locationId = req.headers["library"];
+
 			try {
 				const result = await BookServices.getOne(
 					req.params.id,
@@ -59,6 +61,10 @@ module.exports = (app) => {
 		})
 		.get("/:id/statuses", async (req, res, next) => {
 			const locationId = req.headers["library"];
+
+			if (!locationId && parseInt(locationId)) {
+				throw HttpError(400, "Library id is required");
+			}
 
 			try {
 				const result = await BookServices.getBookStatuses(
