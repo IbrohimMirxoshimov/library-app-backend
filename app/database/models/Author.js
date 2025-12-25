@@ -11,6 +11,11 @@ const Author = sequelize.define(
 	},
 	{
 		paranoid: true,
+		indexes: [
+			{
+				fields: ["name"],
+			},
+		],
 	}
 );
 

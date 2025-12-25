@@ -62,16 +62,12 @@ module.exports = {
 				query,
 				{
 					search: ({ q }) => {
-						return Sequelize.where(
-							Sequelize.fn(
-								"concat",
-								Sequelize.col("books.name"),
-								Sequelize.col("author.name")
-							),
-							{
-								[Op.iLike]: `%${q}%`,
-							}
-						);
+						return {
+							[Op.or]: [
+								{ name: { [Op.iLike]: `%${q}%` } },
+								{ "$author.name$": { [Op.iLike]: `%${q}%` } },
+							],
+						};
 					},
 					options: {
 						distinct: true,
