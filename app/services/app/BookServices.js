@@ -30,7 +30,7 @@ const BookOptions = {
 };
 
 module.exports = {
-	getOne(id) {
+	getOne(id, locationId) {
 		return Book.findByPk(id, {
 			attributes: BookOptions.attributes,
 			paranoid: false,
@@ -40,7 +40,7 @@ module.exports = {
 					as: "stocks",
 					attributes: ["id", "busy", "locationId"],
 					where: {
-						locationId: 1,
+						locationId: locationId || 1,
 					},
 				},
 				{
@@ -56,7 +56,7 @@ module.exports = {
 			],
 		});
 	},
-	getList(query) {
+	getList(query, locationId) {
 		return Book.findAndCountAll(
 			getListOptions(
 				query,
@@ -91,7 +91,7 @@ module.exports = {
 						as: "stocks",
 						attributes: ["id", "busy", "locationId"],
 						where: getObjectAvailable({
-							locationId: query.locationId || 1,
+							locationId: locationId || 1,
 							busy: query.busy,
 						}),
 						required: true, // INNER JOIN - faster than LEFT JOIN

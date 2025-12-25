@@ -9,8 +9,9 @@ module.exports = (app) => {
 
 	route
 		.get("/", async (req, res, next) => {
+			const locationId = req.headers["library"];
 			try {
-				const { count, rows } = await BookServices.getList(req.query);
+				const { count, rows } = await BookServices.getList(req.query, locationId);
 
 				return listResponse(res, req.query.page, rows, count);
 			} catch (e) {
@@ -39,8 +40,12 @@ module.exports = (app) => {
 			}
 		})
 		.get("/:id", async (req, res, next) => {
+			const locationId = req.headers["library"];
 			try {
-				let result = await BookServices.getOne(req.params.id);
+				const result = await BookServices.getOne(
+					req.params.id,
+					locationId
+				);
 
 				if (!result) throw HttpError(404);
 
