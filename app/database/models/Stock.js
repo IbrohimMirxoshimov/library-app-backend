@@ -11,6 +11,20 @@ const Stock = sequelize.define(
 	},
 	{
 		paranoid: true,
+		indexes: [
+			{
+				name: "idx_stocks_location_busy",
+				fields: ["locationId", "busy"],
+			},
+			{
+				name: "idx_stocks_book_id",
+				fields: ["bookId"],
+			},
+			{
+				name: "idx_stocks_location_book",
+				fields: ["locationId", "bookId"],
+			},
+		],
 	}
 );
 

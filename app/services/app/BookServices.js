@@ -62,14 +62,24 @@ module.exports = {
 				query,
 				{
 					search: ({ q }) => {
+						// Lowercase search for better index usage
+						const searchTerm = q.toLowerCase();
 						return {
 							[Op.or]: [
-								{ name: { [Op.iLike]: `%${q}%` } },
-								{ "$author.name$": { [Op.iLike]: `%${q}%` } },
+								Sequelize.where(
+									Sequelize.fn("LOWER", Sequelize.col("books.name")),
+									{ [Op.like]: `%${searchTerm}%` }
+								),
+								Sequelize.where(
+									Sequelize.fn("LOWER", Sequelize.col("author.name")),
+									{ [Op.like]: `%${searchTerm}%` }
+								),
 							],
 						};
 					},
 					options: {
+						// Use subQuery to optimize distinct count
+						subQuery: false,
 						distinct: true,
 						attributes: BookOptions.attributes,
 					},
@@ -84,16 +94,13 @@ module.exports = {
 							locationId: query.locationId || 1,
 							busy: query.busy,
 						}),
+						required: true, // INNER JOIN - faster than LEFT JOIN
 					},
 					{
 						model: Author,
 						as: "author",
 						attributes: ["name"],
-						where: {
-							id: {
-								[Op.not]: null,
-							},
-						},
+						required: true, // INNER JOIN
 					},
 				]
 			)

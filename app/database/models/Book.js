@@ -47,6 +47,20 @@ const Book = sequelize.define(
 	},
 	{
 		paranoid: true,
+		indexes: [
+			{
+				name: "idx_books_name",
+				fields: ["name"],
+			},
+			{
+				name: "idx_books_name_lower",
+				fields: [sequelize.fn("LOWER", sequelize.col("name"))],
+			},
+			{
+				name: "idx_books_author_id",
+				fields: ["authorId"],
+			},
+		],
 	}
 );
 
