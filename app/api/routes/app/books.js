@@ -11,7 +11,10 @@ module.exports = (app) => {
 		.get("/", async (req, res, next) => {
 			const locationId = req.headers["library"];
 			try {
-				const { count, rows } = await BookServices.getList(req.query, locationId);
+				const { count, rows } = await BookServices.getList(
+					req.query,
+					locationId
+				);
 
 				return listResponse(res, req.query.page, rows, count);
 			} catch (e) {
@@ -54,29 +57,22 @@ module.exports = (app) => {
 				next(e);
 			}
 		})
-		.get(
-			"/:id/statuses",
-			celebrate({
-				query: Joi.object({
-					locationId: Joi.number().required(),
-				}),
-			}),
+		.get("/:id/statuses", async (req, res, next) => {
+			const locationId = req.headers["library"];
 
-			async (req, res, next) => {
-				try {
-					let result = await BookServices.getBookStatuses(
-						req.params.id,
-						req.query.locationId
-					);
+			try {
+				const result = await BookServices.getBookStatuses(
+					req.params.id,
+					locationId
+				);
 
-					if (!result) throw HttpError(404);
+				if (!result) throw HttpError(404);
 
-					return res.json(result).status(200);
-				} catch (e) {
-					next(e);
-				}
+				return res.json(result).status(200);
+			} catch (e) {
+				next(e);
 			}
-		);
+		});
 
 	app.use("/books", route);
 };
