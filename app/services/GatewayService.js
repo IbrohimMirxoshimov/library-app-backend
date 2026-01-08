@@ -276,9 +276,19 @@ const GatewayService = {
 
 			const createdSms = await Sms.bulkCreate(messages);
 
-			for (const sms of createdSms) {
-				await this.pushSendSms(sms.id);
-			}
+			const sendPush = async () => {
+				for (const sms of createdSms) {
+					await this.pushSendSms(sms.id);
+
+					const jitter = Math.floor(Math.random() * 8000);
+
+					await new Promise((resolve) =>
+						setTimeout(resolve, 5000 + jitter)
+					);
+				}
+			};
+
+			sendPush();
 
 			return {
 				totalCount: todayPhones.length,
