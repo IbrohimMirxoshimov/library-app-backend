@@ -5,7 +5,6 @@ const { verifyCode } = require("./Verification");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
 const Location = require("../database/models/Location.js");
-const EXPIRE_TIME_TOKEN = 1000 * 60 * 60 * 24 * 12;
 
 function generateToken(user) {
 	return jwt.sign(
@@ -16,7 +15,7 @@ function generateToken(user) {
 			locationId: user.locationId,
 			owner: user.owner,
 			moderator: user.moderator,
-			exp: Math.floor((Date.now() + EXPIRE_TIME_TOKEN) / 1000),
+			exp: Math.floor((Date.now() + config.JWT_EXPIRATION_TIME) / 1000),
 		},
 		config.jwtSecret
 	);
