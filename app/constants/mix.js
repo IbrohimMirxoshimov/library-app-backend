@@ -7,6 +7,7 @@ const SmsProviderType = {
 	play_mobile: 1,
 	eskiz: 2,
 	manual: 3,
+	gateway: 4,
 };
 const SmsStatusEnum = {
 	draft: "draft",
@@ -14,6 +15,7 @@ const SmsStatusEnum = {
 	delivered: "delivered",
 	error: "error",
 };
+const GATEWAY_SMS_DAILY_LIMIT = 220;
 module.exports = {
 	ESKIZ_WEBHOOK_ROUTE: "/eskiz",
 	NO_IMAGE_URL,
@@ -22,4 +24,5 @@ module.exports = {
 	ONE_MILLIMETER_IN_PIXEL,
 	SmsProviderType,
 	SmsStatusEnum,
+	GATEWAY_SMS_DAILY_LIMIT,
 };

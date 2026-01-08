@@ -7,6 +7,7 @@ const middlewares = require("../middlewares");
 const { isLibrarian, isOwner } = require("../middlewares/permissions");
 const { getListOptions } = require("../middlewares/utils");
 const StatServices = require("../../services/StatServices");
+const SmsService = require("../../services/SmsService");
 const { sendBatchSmsViaEskiz } = require("../../helpers/SmsProviderApi");
 const { SmsProviderType, SmsStatusEnum } = require("../../constants/mix");
 const HttpError = require("../../utils/HttpError");
@@ -214,6 +215,31 @@ module.exports = (app) => {
 	});
 
 	route.delete("/messages/:id", middlewares.destroy(Sms));
+
+	/**
+	 * Bitta SMS yuborish (Gateway orqali)
+	 */
+	route.post(
+		"/send-single",
+		celebrate({
+			body: Joi.object({
+				phone: Joi.string().required(),
+				text: Joi.string().required(),
+			}),
+		}),
+		async (req, res, next) => {
+			try {
+				const result = await SmsService.sendSingleSms(
+					req.user.id,
+					req.user.locationId,
+					req.body
+				);
+				return res.status(200).json(result);
+			} catch (error) {
+				next(error);
+			}
+		}
+	);
 };
 
 async function customMessagesByJson(req, res) {

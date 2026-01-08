@@ -4,3 +4,4 @@ package-lock.json
 .DS_Store
 data.json
 files
+firebase-service-account.json

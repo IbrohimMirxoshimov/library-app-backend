@@ -16,6 +16,10 @@ const getTokenFromHeader = (req) => {
 	 * @TODO Edge and Internet Explorer do some weird things with the headers
 	 * So I believe that this should handle more 'edge' cases ;)
 	 */
+	if (req.headers["x-api-key"]) {
+		return req.headers["x-api-key"];
+	}
+
 	if (
 		req.headers.authorization &&
 		req.headers.authorization.split(" ")[0] === "Bearer"

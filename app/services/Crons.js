@@ -11,47 +11,12 @@ const {
 const { SmsProviderType } = require("../constants/mix");
 const UserStatus = require("../constants/UserStatus");
 const { toMatrix } = require("../utils/array");
+const GatewayService = require("./GatewayService");
 const CronJob = require("cron").CronJob;
 const fs = require("fs").promises;
 const path = require("path");
 
-// Fayl bilan ishlash uchun utility funksiyalar
-const PENDING_RENTS_FILE = path.join(__dirname, "../../files/pending-expired-rents.json");
-
-/**
- * Fayldan qolgan phone numberlarni o'qish
- * @async
- * @function readPendingRents
- * @returns {Promise<string[]>} Phone numberlar massivi (998 prefiksisiz)
- * @description Fayl mavjud emas yoki xatolik bo'lsa bo'sh array qaytaradi
- */
-async function readPendingRents() {
-	try {
-		const data = await fs.readFile(PENDING_RENTS_FILE, "utf8");
-		return JSON.parse(data);
-	} catch (error) {
-		// Fayl mavjud emas yoki xatolik - bo'sh array qaytarish
-		return [];
-	}
-}
-
-/**
- * Qolgan phone numberlarni faylga yozish
- * @async
- * @function writePendingRents
- * @param {string[]} phoneNumbers - Saqlash kerak bo'lgan phone numberlar massivi
- * @returns {Promise<void>}
- * @throws {Error} Faylga yozishda xatolik bo'lsa
- * @description Phone numberlarni JSON formatida faylga yozadi
- */
-async function writePendingRents(phoneNumbers) {
-	try {
-		await fs.writeFile(PENDING_RENTS_FILE, JSON.stringify(phoneNumbers, null, 2));
-	} catch (error) {
-		console.error("Faylga yozishda xatolik:", error);
-		throw error;
-	}
-}
+// Fayl bilan ishlash uchun utility funksiyalar SmsGatewayService ga ko'chirildi
 
 function getStatusEmoji(rent) {
 	if (rent.returnedAt) {
@@ -299,136 +264,10 @@ const Crons = {
 		return job.start();
 	},
 	/**
-	 * Muddati o'tgan rentlar uchun SMS yaratish metodini boshqaradi.
-	 * Har kuni maksimal 250 ta SMS yaratadi, qolgan phone numberlarni faylga saqlaydi.
-	 * 
-	 * @description
-	 * - Yangi rent ma'lumotlarini olish
-	 * - Fayldan qolgan phone numberlarni olish va yangi ma'lumotlar bilan solishtirish
-	 * - 250 ta SMS limitini boshqarish:
-	 *   * Fayldagilar 250+ bo'lsa: 250 tasini ishlatish, qolganini faylga yozish
-	 *   * Fayldagilar 250 dan kam bo'lsa: fayldagilarni + yangi rowsdan qo'shimcha olish
-	 * - Qolgan phone numberlarni ertangi kun uchun faylga saqlash
-	 * - SMS va SmsBulk yaratish
-	 * 
-	 * @async
-	 * @function createSmsForExpiredRents
-	 * @returns {Promise<Object>} Natija obyekti
-	 * @returns {number} returns.totalCount - Bugungi kun uchun yaratilgan SMS soni
-	 * @returns {number} returns.pendingCount - Ertangi kun uchun saqlangan phone numberlar soni
-	 * 
-	 * @throws {Error} Fayl bilan ishlashda yoki SMS yaratishda xatolik bo'lsa
-	 * 
-	 * @example
-	 * // Har kuni ertalab 6:00 da ishlaydi
-	 * const result = await createSmsForExpiredRents();
-	 * console.log(`Yaratildi: ${result.totalCount}, Qoldi: ${result.pendingCount}`);
+	 * Muddati o'tgan ijara (rent) lar uchun SMS yaratish vazifasini ishga tushiradi.
 	 */
 	async createSmsForExpiredRents() {
-		try {
-			const locationId = 1;
-			const { rows } = await RentServices.report(locationId);
-
-			// Yangi rent ma'lumotlarini phone number bo'yicha guruhlash
-			const newRentsByPhone = {};
-			rows.forEach((rent) => {
-				const phone = rent.user.phone;
-				newRentsByPhone[phone] = rent;
-			});
-
-			// Fayldan qolgan ma'lumotlarni olish
-			const pendingPhones = await readPendingRents();
-
-			// Fayldagi phone numberlarni yangi ma'lumotlar bilan solishtirish
-			// Faqat yangi ma'lumotlarda mavjud bo'lganlarni qoldirish
-			const validPendingPhones = pendingPhones.filter(phone => 
-				newRentsByPhone.hasOwnProperty(phone)
-			);
-
-			// Bugungi kun uchun ishlatiladigan phone numberlar
-			let todayPhones = [];
-			let remainingPhones = [];
-
-			if (validPendingPhones.length >= 250) {
-				// Fayldagilar 250+ bo'lsa: 250 tasini ishlatish, qolganini faylga yozish
-				todayPhones = validPendingPhones.slice(0, 250);
-				remainingPhones = validPendingPhones.slice(250);
-			} else {
-				// Fayldagilar 250 dan kam bo'lsa: fayldagilarni ishlatish + yangi rowsdan qo'shimcha olish
-				todayPhones = [...validPendingPhones];
-				const needed = 250 - todayPhones.length;
-				
-				// Yangi phone numberlardan qo'shimcha olish
-				// Eski raqamlar takrorlanib qolmasligi kerak
-				const newPhones = Object.keys(newRentsByPhone).filter(phone => 
-					!validPendingPhones.includes(phone)
-				);
-				
-				const additionalPhones = newPhones.slice(0, needed);
-				todayPhones = [...todayPhones, ...additionalPhones];
-				
-				// Qolgan yangi phone numberlarni faylga yozish
-				remainingPhones = newPhones.slice(needed);
-			}
-
-			// Qolgan phone numberlarni faylga yozish
-			await writePendingRents(remainingPhones);
-
-			if (todayPhones.length === 0) {
-				console.log("Bugungi kun uchun SMS yasash kerak emas");
-				return { totalCount: 0 };
-			}
-
-			const mainLibrarianId = 190;
-
-			// Bugungi kun uchun SMS yaratish
-			const messages = todayPhones.map((phone) => {
-				const rent = newRentsByPhone[phone];
-				const text = SmsTemplates.rentExpiredWithCustomLinkNew.getText({
-					fullName: `${rent.user.firstName} ${rent.user.lastName}`,
-					url_param: rent.user.phone,
-					shortFullName: `${rent.user.lastName} ${rent.user.firstName[0]}`,
-				});
-
-				return {
-					phone_number: phone,
-					text: text,
-				};
-			});
-
-			const smsbulk = await SmsBulk.create({
-				attributes: ["id"],
-				text: SmsTemplates.rentExpiredWithCustomLink.getText({
-					fullName: "Avto yasalgan",
-					url_param: "Raqam",
-				}),
-				userId: mainLibrarianId,
-			});
-
-			await Sms.bulkCreate(
-				messages.map((message) => {
-					return {
-						phone: message.phone_number,
-						userId: mainLibrarianId,
-						text: message.text,
-						smsbulkId: smsbulk.id,
-						status: "draft",
-					};
-				})
-			);
-
-			console.log(`Bugungi kun uchun ${todayPhones.length} ta SMS yaratildi`);
-			console.log(`${remainingPhones.length} ta phone number ertangi kun uchun saqlandi`);
-
-			return {
-				totalCount: todayPhones.length,
-				pendingCount: remainingPhones.length,
-			};
-		} catch (error) {
-			console.error("createSmsForExpiredRents error");
-			console.error(error);
-			throw error; // Error handling uchun throw qilish
-		}
+		return GatewayService.createSmsForExpiredRents();
 	},
 	async rentExpiresBulkSms(phonesToSkip) {
 		try {
@@ -539,8 +378,8 @@ const Crons = {
 	},
 	createSmsForExpiredRentsCron() {
 		const job = new CronJob(
-			// At 06:00 every day exept Friday
-			"0 6 * * 1-4,6",
+			// At 09:00 every day
+			"0 9 * * *",
 			this.createSmsForExpiredRents,
 			null,
 			true,

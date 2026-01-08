@@ -30,12 +30,16 @@ const Sms = sequelize.define(
 						SmsProviderType.eskiz,
 						SmsProviderType.manual,
 						SmsProviderType.play_mobile,
+						SmsProviderType.gateway,
 					],
 				],
 			},
 		},
 		provider_message_id: {
 			type: DataTypes.STRING,
+		},
+		receivedAt: {
+			type: DataTypes.DATE,
 		},
 	},
 	{

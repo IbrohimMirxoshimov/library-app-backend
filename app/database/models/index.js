@@ -19,6 +19,7 @@ db.Comment = require("./Comment");
 db.News = require("./News");
 db.Sms = require("./Sms");
 db.SmsBulk = require("./SmsBulk");
+db.Device = require("./Device");
 
 // relations
 db.User.hasMany(db.Rent);
@@ -110,6 +111,15 @@ db.User.hasMany(db.Author, {
 db.Author.belongsTo(db.User, {
 	foreignKey: "creatorId",
 });
+
+db.User.hasMany(db.Device);
+db.Device.belongsTo(db.User);
+
+db.Location.hasMany(db.Device);
+db.Device.belongsTo(db.Location);
+
+db.Device.hasMany(db.Sms);
+db.Sms.belongsTo(db.Device);
 
 db.sequelize = sequelize;
 

@@ -38,6 +38,7 @@ module.exports = (app) => {
 
 	app.use((err, req, res, next) => {
 		if (isCelebrateError(err)) {
+			console.log(err);
 			const {
 				details: [{ message }],
 			} = err.details.get("body"); // 'details' is a Map()

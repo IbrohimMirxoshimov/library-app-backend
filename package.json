@@ -21,6 +21,7 @@
 		"express": "^4.17.1",
 		"express-jwt": "^6.0.0",
 		"express-rate-limit": "^7.2.0",
+		"firebase-admin": "^13.6.0",
 		"pg": "^8.6.0",
 		"pg-hstore": "^2.3.3",
 		"qs": "^6.10.1",
