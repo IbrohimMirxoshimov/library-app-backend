@@ -41,9 +41,13 @@ const Sms = sequelize.define(
 		receivedAt: {
 			type: DataTypes.DATE,
 		},
+		updatedAt: {
+			type: DataTypes.DATE,
+			defaultValue: DataTypes.NOW,
+		},
 	},
 	{
-		updatedAt: false,
+		updatedAt: true,
 		createdAt: false,
 	}
 );
