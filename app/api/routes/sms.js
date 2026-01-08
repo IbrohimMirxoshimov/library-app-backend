@@ -193,7 +193,7 @@ module.exports = (app) => {
 		try {
 			const { count, rows } = await Sms.findAndCountAll(
 				getListOptions(
-					{ ...req.query, sort: "id", order: "ASC", size: 300 },
+					{ sort: "id", order: "ASC", size: 300, ...req.query },
 					null,
 					Sms,
 					null,

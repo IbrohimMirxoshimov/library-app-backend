@@ -11,17 +11,17 @@ module.exports = (app) => {
 	 * Gateway uchun global so'rov loger-i.
 	 * Har bir kelgan so'rovning methodi, manzili va body-sini console-ga chiqaradi.
 	 */
-	// route.use((req, res, next) => {
-	// 	console.log(
-	// 		`[GATEWAY LOG] ${new Date().toISOString()} ${req.method} ${
-	// 			req.originalUrl
-	// 		}`
-	// 	);
-	// 	if (Object.keys(req.body).length > 0) {
-	// 		console.log("[GATEWAY BODY]", JSON.stringify(req.body, null, 2));
-	// 	}
-	// 	next();
-	// });
+	route.use((req, res, next) => {
+		console.log(
+			`[GATEWAY LOG] ${new Date().toISOString()} ${req.method} ${
+				req.originalUrl
+			}`
+		);
+		if (Object.keys(req.body).length > 0) {
+			console.log("[GATEWAY BODY]", JSON.stringify(req.body, null, 2));
+		}
+		next();
+	});
 
 	// Qurilmani ro'yxatdan o'tkazish
 	route.post(
@@ -131,6 +131,7 @@ module.exports = (app) => {
 					req.params.id,
 					req.body
 				);
+				console.log(`SMS updated:`, result);
 				return res.status(200).json(result);
 			} catch (error) {
 				next(error);
