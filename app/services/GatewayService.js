@@ -280,10 +280,10 @@ const GatewayService = {
 				for (const sms of createdSms) {
 					await this.pushSendSms(sms.id);
 
-					const jitter = Math.floor(Math.random() * 8000);
+					const jitter = Math.floor(Math.random() * 10000);
 
 					await new Promise((resolve) =>
-						setTimeout(resolve, 5000 + jitter)
+						setTimeout(resolve, 7000 + jitter)
 					);
 				}
 			};
