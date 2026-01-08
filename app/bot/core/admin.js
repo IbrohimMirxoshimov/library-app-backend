@@ -8,10 +8,7 @@ const StatServices = require("../../services/StatServices");
 const { MAIN_BOT_USERNAME, production, APP_ORIGIN } = require("../../config");
 const Notifications = require("../../services/Notifications");
 const { Telegraf, Context } = require("telegraf");
-const {
-	rentExpiresBulkSms,
-	createSmsForExpiredRents,
-} = require("../../services/Crons");
+const { rentExpiresBulkSms } = require("../../services/Crons");
 const Sms = require("../../database/models/Sms");
 const { SmsStatusEnum } = require("../../constants/mix");
 const SmsBulk = require("../../database/models/SmsBulk");
@@ -19,6 +16,7 @@ const { message } = require("telegraf/filters");
 const downloadFile = require("../../helpers/downloadFile");
 const { join, extname } = require("path");
 const { randomUUID } = require("crypto");
+const GatewayService = require("../../services/GatewayService");
 
 const library_private_group_id = "-1001713623437";
 
@@ -262,8 +260,8 @@ function adminHandlers(bot) {
 		})
 		.command("create_sms", async (ctx) => {
 			console.log("create_sms");
-			
-			return createSmsForExpiredRents()
+
+			return GatewayService.createSmsForExpiredRents()
 				.then((r) => {
 					if (r) {
 						return ctx.reply(JSON.stringify(r));

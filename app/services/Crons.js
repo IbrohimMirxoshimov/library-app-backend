@@ -263,12 +263,6 @@ const Crons = {
 		);
 		return job.start();
 	},
-	/**
-	 * Muddati o'tgan ijara (rent) lar uchun SMS yaratish vazifasini ishga tushiradi.
-	 */
-	async createSmsForExpiredRents() {
-		return GatewayService.createSmsForExpiredRents();
-	},
 	async rentExpiresBulkSms(phonesToSkip) {
 		try {
 			const locationId = 1;
@@ -380,7 +374,9 @@ const Crons = {
 		const job = new CronJob(
 			// At 09:00 every day
 			"0 9 * * *",
-			this.createSmsForExpiredRents,
+			() => {
+				GatewayService.createSmsForExpiredRents();
+			},
 			null,
 			true,
 			"Asia/Tashkent"
