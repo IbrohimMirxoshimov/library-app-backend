@@ -15,8 +15,8 @@ const SmsStatusEnum = {
 	delivered: "delivered",
 	error: "error",
 };
-const GATEWAY_SMS_DAILY_LIMIT = 5;
-// const GATEWAY_SMS_DAILY_LIMIT = 220;
+const GATEWAY_SMS_DAILY_LIMIT = 220;
+
 module.exports = {
 	ESKIZ_WEBHOOK_ROUTE: "/eskiz",
 	NO_IMAGE_URL,
