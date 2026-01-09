@@ -138,4 +138,33 @@ module.exports = (app) => {
 			}
 		}
 	);
+
+	// Pending SMS larni olish (paginated)
+	route.get(
+		"/devices/:deviceId/pending-sms",
+		isAuth,
+		celebrate({
+			params: Joi.object({
+				deviceId: Joi.number().required(),
+			}),
+			query: Joi.object({
+				page: Joi.number().integer().min(0).default(0),
+				size: Joi.number().integer().min(1).max(50).default(10),
+			}),
+		}),
+		async (req, res, next) => {
+			try {
+				const result = await GatewayService.getPendingSms(
+					req.params.deviceId,
+					req.user.id,
+					parseInt(req.query.page),
+					parseInt(req.query.size)
+				);
+
+				return res.status(200).json(result);
+			} catch (error) {
+				next(error);
+			}
+		}
+	);
 };

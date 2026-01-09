@@ -210,6 +210,77 @@ const GatewayService = {
 	},
 
 	/**
+	 * Pending SMS mavjudligi haqida bitta push yuborish.
+	 * Android app bu pushni qabul qilganda o'zi pending SMS larni oladi.
+	 */
+	async pushPendingSmsNotification(userId) {
+		if (!initFCM()) return false;
+
+		const device = await Device.findOne({
+			where: { userId, enabled: true },
+			order: [["updatedAt", "DESC"]],
+		});
+
+		if (!device || !device.fcmToken) return false;
+
+		const message = {
+			data: {
+				type: "PENDING_SMS_AVAILABLE",
+			},
+			token: device.fcmToken,
+		};
+
+		try {
+			await admin.messaging().send(message);
+			console.log(
+				`PENDING_SMS_AVAILABLE push yuborildi userId: ${userId}`
+			);
+			return true;
+		} catch (error) {
+			console.error("Pending SMS push yuborishda xato:", error);
+			return false;
+		}
+	},
+
+	/**
+	 * Pending SMS larni paginated olish.
+	 * Android app bu API orqali draft SMS larni oladi va birma-bir yuboradi.
+	 */
+	async getPendingSms(deviceId, userId, page = 1, size = 10) {
+		const offset = (page - 1) * size;
+
+		const { count, rows } = await Sms.findAndCountAll({
+			where: {
+				userId,
+				status: SmsStatusEnum.draft,
+				provider: SmsProviderType.gateway,
+			},
+			order: [["createdAt", "ASC"]],
+			limit: size,
+			offset,
+		});
+
+		// SMS larni deviceId bilan yangilaymiz
+		const smsIds = rows.map((sms) => sms.id);
+		if (smsIds.length > 0) {
+			await Sms.update({ deviceId }, { where: { id: smsIds } });
+		}
+
+		return {
+			items: rows.map((sms) => ({
+				id: sms.id.toString(),
+				phone: sms.phone,
+				text: sms.text,
+			})),
+			page,
+			size,
+			totalElements: count,
+			totalPages: Math.ceil(count / size),
+			last: offset + rows.length >= count,
+		};
+	},
+
+	/**
 	 * Kunlik cron logic - muddati o'tgan ijara uchun SMS yaratish.
 	 */
 	async createSmsForExpiredRents() {
@@ -274,21 +345,10 @@ const GatewayService = {
 				};
 			});
 
-			const createdSms = await Sms.bulkCreate(messages);
+			await Sms.bulkCreate(messages);
 
-			const sendPush = async () => {
-				for (const sms of createdSms) {
-					await this.pushSendSms(sms.id);
-
-					const jitter = Math.floor(Math.random() * 10000);
-
-					await new Promise((resolve) =>
-						setTimeout(resolve, 7000 + jitter)
-					);
-				}
-			};
-
-			sendPush();
+			// Bitta push yuborish - Android app o'zi pending SMS larni oladi
+			await this.pushPendingSmsNotification(mainLibrarianId);
 
 			return {
 				totalCount: todayPhones.length,
