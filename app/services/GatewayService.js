@@ -255,7 +255,7 @@ const GatewayService = {
 				status: SmsStatusEnum.draft,
 				provider: SmsProviderType.gateway,
 			},
-			order: [["createdAt", "ASC"]],
+			order: [["updatedAt", "ASC"]],
 			limit: size,
 			offset,
 		});
@@ -361,4 +361,6 @@ const GatewayService = {
 	},
 };
 
+// GatewayService.getPendingSms(8, 190);
+GatewayService.pushPendingSmsNotification(190);
 module.exports = GatewayService;
