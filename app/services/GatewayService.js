@@ -262,8 +262,12 @@ const GatewayService = {
 
 		// SMS larni deviceId bilan yangilaymiz
 		const smsIds = rows.map((sms) => sms.id);
+
 		if (smsIds.length > 0) {
-			await Sms.update({ deviceId }, { where: { id: smsIds } });
+			await Sms.update(
+				{ deviceId, status: SmsStatusEnum.sent },
+				{ where: { id: smsIds } }
+			);
 		}
 
 		return {
@@ -362,5 +366,5 @@ const GatewayService = {
 };
 
 // GatewayService.getPendingSms(8, 190);
-GatewayService.pushPendingSmsNotification(190);
+// GatewayService.pushPendingSmsNotification(190);
 module.exports = GatewayService;
