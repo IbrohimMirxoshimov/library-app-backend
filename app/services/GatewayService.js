@@ -265,7 +265,7 @@ const GatewayService = {
 
 		if (smsIds.length > 0) {
 			await Sms.update(
-				{ deviceId, status: SmsStatusEnum.sent },
+				{ deviceId, status: SmsStatusEnum.pending },
 				{ where: { id: smsIds } }
 			);
 		}
