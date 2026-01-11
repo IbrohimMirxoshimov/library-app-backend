@@ -196,6 +196,10 @@ const GatewayService = {
 					message: sms.text,
 				}),
 			},
+			android: {
+				priority: "high",
+				ttl: 3600 * 1000 * 2, // 2 soat
+			},
 			token: device.fcmToken,
 		};
 
@@ -228,6 +232,10 @@ const GatewayService = {
 				type: "PENDING_SMS_AVAILABLE",
 			},
 			token: device.fcmToken,
+			android: {
+				priority: "high",
+				ttl: 3600 * 1000 * 2, // 2 soat
+			},
 		};
 
 		try {
@@ -367,4 +375,31 @@ const GatewayService = {
 
 // GatewayService.getPendingSms(8, 190);
 // GatewayService.pushPendingSmsNotification(190);
+
+async function sendTestPushMessage() {
+	initFCM();
+
+	const device = await Device.findOne({
+		where: { userId: 190, enabled: true },
+		order: [["updatedAt", "DESC"]],
+	});
+
+	if (!device || !device.fcmToken) return false;
+
+	await admin.messaging().send({
+		data: {
+			smsData: JSON.stringify({
+				smsId: "12",
+				recipients: ["998843566"],
+				message: "Hello",
+			}),
+		},
+		android: {
+			priority: "high",
+			ttl: 3600 * 1000, // 1 soat
+		},
+		token: device.fcmToken,
+	});
+}
+
 module.exports = GatewayService;
