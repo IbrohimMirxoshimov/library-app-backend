@@ -1,6 +1,6 @@
 const { SmsProviderType, SmsStatusEnum } = require("../../constants/mix");
 const sequelize = require("./sequelize");
-const { DataTypes } = require("sequelize");
+const { DataTypes, Op } = require("sequelize");
 
 const Sms = sequelize.define(
 	"sms",
@@ -61,6 +61,13 @@ const Sms = sequelize.define(
 			{
 				name: "sms_user_id_updated_at_index",
 				fields: ["userId", { name: "updatedAt", order: "DESC" }],
+			},
+			{
+				name: "sms_received_messages_index",
+				fields: ["userId", "phone"],
+				where: {
+					receivedAt: { [Op.ne]: null },
+				},
 			},
 		],
 	}

@@ -223,6 +223,18 @@ module.exports = (app) => {
 			const limit = parseInt(req.query.size) || 20;
 			const page = parseInt(req.query.page) || 1;
 			const offset = (page - 1) * limit;
+			const showAll = req.query.all === "true" || req.query.all === "1";
+			const search = req.query.q ? `%${req.query.q}%` : null;
+
+			// Faqat javob kelgan (receivedAt (IS NOT NULL) bo'lgan) raqamlarni olish uchun filtr
+			let filterSql = "";
+			if (!showAll) {
+				filterSql += ` AND phone IN (SELECT DISTINCT phone FROM sms WHERE "userId" = :userId AND "receivedAt" IS NOT NULL)`;
+			}
+
+			if (search) {
+				filterSql += ` AND phone ILIKE :search`;
+			}
 
 			// PostgreSQL uchun eng tezkor query (DISTINCT ON yordamida har bir raqamdan eng oxirgi smsni olish)
 			const query = `
@@ -230,6 +242,7 @@ module.exports = (app) => {
 					SELECT DISTINCT ON (phone) *
 					FROM sms
 					WHERE "userId" = :userId
+					${filterSql}
 					ORDER BY phone, "updatedAt" DESC
 				) AS sub
 				ORDER BY "updatedAt" DESC
@@ -241,6 +254,7 @@ module.exports = (app) => {
 					userId: req.user.id,
 					limit,
 					offset,
+					search,
 				},
 				type: Sms.sequelize.QueryTypes.SELECT,
 			});
