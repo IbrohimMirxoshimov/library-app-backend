@@ -227,8 +227,9 @@ module.exports = (app) => {
 			const search = req.query.q ? `%${req.query.q}%` : null;
 
 			// Faqat javob kelgan (receivedAt (IS NOT NULL) bo'lgan) raqamlarni olish uchun filtr
+			// search bo'lsa hammasi chiqishi kerak
 			let filterSql = "";
-			if (!showAll) {
+			if (!showAll && !search) {
 				filterSql += ` AND phone IN (SELECT DISTINCT phone FROM sms WHERE "userId" = :userId AND "receivedAt" IS NOT NULL)`;
 			}
 
