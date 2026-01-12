@@ -22,9 +22,15 @@ exports.SmsTemplates = {
 		id: 5824,
 		getText: ({ fullName, url_param, shortFullName = "" }) => {
 			const template = (name, url_param) =>
-				`${clearText(
-					name
-				)} ijaraga olgan kitobingiz vaqtidan kechikibdi\nBepul kutubxonaga zarar keltirmaylik\nHavolaga kiring!\nmehrkutubxonasi.uz/s/${url_param}`;
+				`${clearText(name)} ijaraga olgan kitobingiz kechikibdi
+Bepul kutubxonaga ZARAR keltirmaylik
+
+Menda SMS pullik
+
+ILTIMOS MENGA TELEGRAMDAN YOZING
+
+TEZROQ`;
+			// mehrkutubxonasi.uz/s/${url_param}`;
 
 			const text = template(fullName, url_param);
 
@@ -141,13 +147,13 @@ exports.sendSmsViaEskiz = async function sendSmsViaEskiz({
 };
 
 /**
- * 
+ *
  * @param {{
  * messages: {text: string, phone_number: string}[],
  * callback_url?: string,
  * message_text_limit?: number
- * }} param0 
- * @returns 
+ * }} param0
+ * @returns
  */
 exports.sendBatchSmsViaEskiz = async function sendSmsViaEskiz({
 	messages,
