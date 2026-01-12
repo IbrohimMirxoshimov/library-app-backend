@@ -46,6 +46,9 @@ const User = sequelize.define(
 			// 	},
 			// },
 		},
+		extraPhone2: {
+			type: DataTypes.STRING,
+		},
 		blockingReason: {
 			type: DataTypes.TEXT,
 		},

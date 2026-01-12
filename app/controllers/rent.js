@@ -273,6 +273,8 @@ const RentController = {
 									Sequelize.col("user.phone"),
 									"p",
 									Sequelize.col("user.extraPhone"),
+									"p",
+									Sequelize.col("user.extraPhone2"),
 									"s",
 									Sequelize.cast(
 										Sequelize.col("stockId"),

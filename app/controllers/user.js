@@ -31,6 +31,7 @@ function clearing(body) {
 		...body,
 		phone: clearPhoneNumber(body.phone),
 		extraPhone: body.extraPhone && clearPhoneNumber(body.extraPhone),
+		extraPhone2: body.extraPhone2 && clearPhoneNumber(body.extraPhone2),
 	};
 }
 
@@ -40,7 +41,9 @@ function clearPhoneNumber(number) {
 
 async function addressReference(user) {
 	if (user.address) {
-		const [address] = await Address.upsert(user.address, { returning: true });
+		const [address] = await Address.upsert(user.address, {
+			returning: true,
+		});
 
 		user.addressId = address.id;
 	}
@@ -112,12 +115,16 @@ const UserController = {
 								Sequelize.fn(
 									"concat",
 									"i",
-									Sequelize.cast(Sequelize.col("users.id"), "varchar"),
+									Sequelize.cast(
+										Sequelize.col("users.id"),
+										"varchar"
+									),
 									".",
 									Sequelize.col("firstName"),
 									Sequelize.col("lastName"),
 									Sequelize.col("phone"),
 									Sequelize.col("extraPhone"),
+									Sequelize.col("extraPhone2"),
 									Sequelize.col("passportId")
 								),
 								{
@@ -216,7 +223,8 @@ const UserController = {
 				where: { id: req.params.id },
 			});
 
-			if (!result[0]) return res.json({ message: "Not found" }).status(404);
+			if (!result[0])
+				return res.json({ message: "Not found" }).status(404);
 
 			return UserController.getOne()(req, res, next);
 			// return res.json({ message: "Updated" }).status(200);

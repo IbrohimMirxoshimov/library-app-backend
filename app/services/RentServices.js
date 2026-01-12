@@ -56,6 +56,7 @@ const RentServices = {
 						"lastName",
 						"phone",
 						"extraPhone",
+						"extraPhone2",
 					],
 					paranoid: false,
 					...userOptions,
