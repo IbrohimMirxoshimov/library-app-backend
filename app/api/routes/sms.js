@@ -214,6 +214,78 @@ module.exports = (app) => {
 		}
 	});
 
+	/**
+	 * SMS lardagi suhbatlar ro'yxati (telefon raqamlar bo'yicha guruhlangan)
+	 * Eng so'nggi sms updatedAt bo'yicha saralangan.
+	 */
+	route.get("/conversations", async (req, res, next) => {
+		try {
+			const limit = parseInt(req.query.size) || 20;
+			const page = parseInt(req.query.page) || 1;
+			const offset = (page - 1) * limit;
+
+			// PostgreSQL uchun eng tezkor query (DISTINCT ON yordamida har bir raqamdan eng oxirgi smsni olish)
+			const query = `
+				SELECT * FROM (
+					SELECT DISTINCT ON (phone) *
+					FROM sms
+					WHERE "userId" = :userId
+					ORDER BY phone, "updatedAt" DESC
+				) AS sub
+				ORDER BY "updatedAt" DESC
+				LIMIT :limit OFFSET :offset
+			`;
+
+			const rows = await Sms.sequelize.query(query, {
+				replacements: {
+					userId: req.user.id,
+					limit,
+					offset,
+				},
+				type: Sms.sequelize.QueryTypes.SELECT,
+			});
+
+			return res.status(200).json({
+				page,
+				items: rows,
+				// totalCount o'chirildi (performance uchun)
+			});
+		} catch (error) {
+			next(error);
+		}
+	});
+
+	/**
+	 * Tanlangan telefon raqami bo'yicha smslar (chat tarixi)
+	 */
+	route.get("/conversations/:phone", async (req, res, next) => {
+		try {
+			const limit = parseInt(req.query.size) || 50;
+			const page = parseInt(req.query.page) || 1;
+			const offset = (page - 1) * limit;
+			const phone = req.params.phone
+				.replace("+998", "")
+				.replace(/\s/g, "");
+
+			const rows = await Sms.findAll({
+				where: {
+					userId: req.user.id,
+					phone: phone,
+				},
+				order: [["updatedAt", "DESC"]],
+				limit,
+				offset,
+			});
+
+			return res.status(200).json({
+				page,
+				items: rows,
+			});
+		} catch (error) {
+			next(error);
+		}
+	});
+
 	route.delete("/messages/:id", middlewares.destroy(Sms));
 
 	/**

@@ -49,6 +49,20 @@ const Sms = sequelize.define(
 	{
 		updatedAt: true,
 		createdAt: false,
+		indexes: [
+			{
+				name: "sms_user_id_phone_updated_at_index",
+				fields: [
+					"userId",
+					"phone",
+					{ name: "updatedAt", order: "DESC" },
+				],
+			},
+			{
+				name: "sms_user_id_updated_at_index",
+				fields: ["userId", { name: "updatedAt", order: "DESC" }],
+			},
+		],
 	}
 );
 
