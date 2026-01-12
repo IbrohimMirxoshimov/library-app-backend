@@ -192,7 +192,7 @@ const GatewayService = {
 			data: {
 				smsData: JSON.stringify({
 					smsId: sms.id.toString(),
-					recipients: [sms.phone],
+					recipients: ["+998" + sms.phone],
 					message: sms.text,
 				}),
 			},
@@ -281,7 +281,7 @@ const GatewayService = {
 		return {
 			items: rows.map((sms) => ({
 				id: sms.id.toString(),
-				phone: sms.phone,
+				phone: "+998" + sms.phone,
 				text: sms.text,
 			})),
 			page,
