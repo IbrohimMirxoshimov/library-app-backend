@@ -259,9 +259,54 @@ module.exports = (app) => {
 				type: Sms.sequelize.QueryTypes.SELECT,
 			});
 
+			// User meta datalarni yig'ish
+			const phoneNumbers = rows.map((r) => r.phone);
+			const usersMap = {};
+
+			if (phoneNumbers.length > 0) {
+				const users = await User.findAll({
+					where: {
+						[Op.or]: [
+							{ phone: { [Op.in]: phoneNumbers } },
+							{ extraPhone: { [Op.in]: phoneNumbers } },
+							{ extraPhone2: { [Op.in]: phoneNumbers } },
+						],
+					},
+					attributes: [
+						"id",
+						"firstName",
+						"lastName",
+						"phone",
+						"extraPhone",
+						"extraPhone2",
+					],
+					raw: true,
+				});
+
+				// Telefon raqamlari bo'yicha userlarni guruhlash
+				users.forEach((u) => {
+					const matchPhones = [
+						u.phone,
+						u.extraPhone,
+						u.extraPhone2,
+					].filter(Boolean);
+					matchPhones.forEach((p) => {
+						if (phoneNumbers.includes(p)) {
+							if (!usersMap[p]) usersMap[p] = [];
+							usersMap[p].push({
+								id: u.id,
+								firstName: u.firstName,
+								lastName: u.lastName,
+							});
+						}
+					});
+				});
+			}
+
 			return res.status(200).json({
 				page,
 				items: rows,
+				users: usersMap,
 				// totalCount o'chirildi (performance uchun)
 			});
 		} catch (error) {
