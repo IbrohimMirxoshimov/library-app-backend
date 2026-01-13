@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const { Op } = require("sequelize");
 const { Device, Sms, SmsBulk } = require("../database/models");
 const {
 	SmsProviderType,
@@ -253,10 +254,12 @@ const GatewayService = {
 	/**
 	 * Pending SMS larni paginated olish.
 	 * Android app bu API orqali draft SMS larni oladi va birma-bir yuboradi.
+	 * Agar draft SMS yo'q bo'lsa, 1 soatdan ko'proq vaqt o'tgan pending SMS larni qaytaradi.
 	 */
 	async getPendingSms(deviceId, userId, page = 1, size = 10) {
 		const offset = (page - 1) * size;
 
+		// Avval draft SMS larni qidiramiz
 		const { count, rows } = await Sms.findAndCountAll({
 			where: {
 				userId,
@@ -268,27 +271,58 @@ const GatewayService = {
 			offset,
 		});
 
+		// Agar draft SMS yo'q bo'lsa, 1 soatdan ko'proq vaqt o'tgan pending SMS larni qidiramiz
+		let finalCount = count;
+		let finalRows = rows;
+
+		if (count === 0) {
+			const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+			const pendingResult = await Sms.findAndCountAll({
+				where: {
+					userId,
+					status: SmsStatusEnum.pending,
+					provider: SmsProviderType.gateway,
+					updatedAt: {
+						[Op.lt]: oneHourAgo,
+					},
+				},
+				order: [["updatedAt", "ASC"]],
+				limit: size,
+				offset,
+			});
+			finalCount = pendingResult.count;
+			finalRows = pendingResult.rows;
+		}
+
 		// SMS larni deviceId bilan yangilaymiz
-		const smsIds = rows.map((sms) => sms.id);
+		const smsIds = finalRows.map((sms) => sms.id);
 
 		if (smsIds.length > 0) {
-			await Sms.update(
-				{ deviceId, status: SmsStatusEnum.pending },
-				{ where: { id: smsIds } }
-			);
+			// Agar draft bo'lsa, pending ga o'tkazamiz; agar pending bo'lsa, faqat deviceId ni yangilaymiz
+			if (count > 0) {
+				await Sms.update(
+					{ deviceId, status: SmsStatusEnum.pending },
+					{ where: { id: smsIds } }
+				);
+			} else {
+				await Sms.update(
+					{ deviceId },
+					{ where: { id: smsIds } }
+				);
+			}
 		}
 
 		return {
-			items: rows.map((sms) => ({
+			items: finalRows.map((sms) => ({
 				id: sms.id.toString(),
 				phone: "+998" + sms.phone,
 				text: sms.text,
 			})),
 			page,
 			size,
-			totalElements: count,
-			totalPages: Math.ceil(count / size),
-			last: offset + rows.length >= count,
+			totalElements: finalCount,
+			totalPages: Math.ceil(finalCount / size),
+			last: offset + finalRows.length >= finalCount,
 		};
 	},
 
