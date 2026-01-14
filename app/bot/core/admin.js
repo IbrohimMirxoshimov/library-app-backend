@@ -276,6 +276,11 @@ function adminHandlers(bot) {
 
 			return ctx.reply("Yangilandi");
 		})
+		.command("push_sms", isStaffMiddleware, async (ctx) => {
+			await GatewayService.pushPendingSmsNotification(190);
+
+			return ctx.reply("ketdi");
+		})
 		.command("books", async (ctx) => {
 			let books = await getBooksWithStocks({
 				size: 100,
