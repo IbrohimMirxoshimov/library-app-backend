@@ -275,24 +275,24 @@ const GatewayService = {
 		let finalCount = count;
 		let finalRows = rows;
 
-		if (count === 0) {
-			const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-			const pendingResult = await Sms.findAndCountAll({
-				where: {
-					userId,
-					status: SmsStatusEnum.pending,
-					provider: SmsProviderType.gateway,
-					updatedAt: {
-						[Op.lt]: oneHourAgo,
-					},
-				},
-				order: [["updatedAt", "ASC"]],
-				limit: size,
-				offset,
-			});
-			finalCount = pendingResult.count;
-			finalRows = pendingResult.rows;
-		}
+		// if (count === 0) {
+		// 	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+		// 	const pendingResult = await Sms.findAndCountAll({
+		// 		where: {
+		// 			userId,
+		// 			status: SmsStatusEnum.pending,
+		// 			provider: SmsProviderType.gateway,
+		// 			updatedAt: {
+		// 				[Op.lt]: oneHourAgo,
+		// 			},
+		// 		},
+		// 		order: [["updatedAt", "ASC"]],
+		// 		limit: size,
+		// 		offset,
+		// 	});
+		// 	finalCount = pendingResult.count;
+		// 	finalRows = pendingResult.rows;
+		// }
 
 		// SMS larni deviceId bilan yangilaymiz
 		const smsIds = finalRows.map((sms) => sms.id);
@@ -305,10 +305,7 @@ const GatewayService = {
 					{ where: { id: smsIds } }
 				);
 			} else {
-				await Sms.update(
-					{ deviceId },
-					{ where: { id: smsIds } }
-				);
+				await Sms.update({ deviceId }, { where: { id: smsIds } });
 			}
 		}
 

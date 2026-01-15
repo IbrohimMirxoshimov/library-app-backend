@@ -178,7 +178,9 @@ module.exports = (app) => {
 						where: {
 							smsbulkId: req.params.id,
 							userId: req.user.id,
-							status: "draft",
+							status: {
+								[Op.or]: ["draft", "pending"],
+							},
 						},
 					}
 				);
