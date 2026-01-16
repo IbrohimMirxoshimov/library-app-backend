@@ -56,8 +56,13 @@ module.exports = {
 			],
 		});
 	},
-	getList(query, locationId) {
-		return Book.findAndCountAll(
+	async getList(query, locationId) {
+		const stockWhere = getObjectAvailable({
+			locationId: locationId || 1,
+			busy: query.busy,
+		});
+
+		const result = await Book.findAndCountAll(
 			getListOptions(
 				query,
 				{
@@ -67,21 +72,33 @@ module.exports = {
 						return {
 							[Op.or]: [
 								Sequelize.where(
-									Sequelize.fn("LOWER", Sequelize.col("books.name")),
+									Sequelize.fn(
+										"LOWER",
+										Sequelize.col("books.name")
+									),
 									{ [Op.like]: `%${searchTerm}%` }
 								),
 								Sequelize.where(
-									Sequelize.fn("LOWER", Sequelize.col("author.name")),
+									Sequelize.fn(
+										"LOWER",
+										Sequelize.col("author.name")
+									),
 									{ [Op.like]: `%${searchTerm}%` }
 								),
 							],
 						};
 					},
 					options: {
-						// Use subQuery to optimize distinct count
+						// Use subQuery for proper pagination
 						subQuery: false,
-						distinct: true,
 						attributes: BookOptions.attributes,
+						// Main filtering: only books that have stocks matching criteria
+						where: Sequelize.literal(`EXISTS (
+							SELECT 1 FROM stocks 
+							WHERE stocks."bookId" = books.id 
+							AND stocks."locationId" = ${stockWhere.locationId}
+							${stockWhere.busy !== undefined ? `AND stocks.busy = ${stockWhere.busy}` : ""}
+						)`),
 					},
 				},
 				Book,
@@ -90,11 +107,8 @@ module.exports = {
 						model: Stock,
 						as: "stocks",
 						attributes: ["id", "busy", "locationId"],
-						where: getObjectAvailable({
-							locationId: locationId || 1,
-							busy: query.busy,
-						}),
-						required: true, // INNER JOIN - faster than LEFT JOIN
+						where: stockWhere,
+						separate: true, // Load in separate query after filtering
 					},
 					{
 						model: Author,
@@ -105,6 +119,8 @@ module.exports = {
 				]
 			)
 		);
+
+		return result;
 	},
 	getBookStatuses(bookId, locationId) {
 		return Rent.findAll({
