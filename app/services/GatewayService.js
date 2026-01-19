@@ -1,6 +1,6 @@
 const admin = require("firebase-admin");
 const { Op } = require("sequelize");
-const { Device, Sms, SmsBulk } = require("../database/models");
+const { Device, Sms, SmsBulk, sequelize } = require("../database/models");
 const {
 	SmsProviderType,
 	SmsStatusEnum,
@@ -260,7 +260,7 @@ const GatewayService = {
 		const offset = (page - 1) * size;
 
 		// Avval draft SMS larni qidiramiz
-		const { count, rows } = await Sms.findAndCountAll({
+		const { rows } = await Sms.findAndCountAll({
 			where: {
 				userId,
 				status: SmsStatusEnum.draft,
@@ -271,55 +271,48 @@ const GatewayService = {
 			offset,
 		});
 
-		// Agar draft SMS yo'q bo'lsa, 1 soatdan ko'proq vaqt o'tgan pending SMS larni qidiramiz
-		let finalCount = count;
-		let finalRows = rows;
+		// 3. Shu raqamlar bo'yicha overdue rentlarni tekshiramiz
+		const overdueUsersWithRent = await sequelize.query(
+			`SELECT DISTINCT u.phone 
+			FROM users u
+			INNER JOIN rent r ON u.id = r."userId"
+			WHERE u.phone IN (:phones)
+			  AND r."returnedAt" IS NULL
+			  AND r."returningDate" < NOW()
+			  AND r."deletedAt" IS NULL
+			  AND u."deletedAt" IS NULL
+			`,
+			{
+				replacements: { phones: uniquePhones },
+				type: sequelize.QueryTypes.SELECT,
+			}
+		);
 
-		// if (count === 0) {
-		// 	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-		// 	const pendingResult = await Sms.findAndCountAll({
-		// 		where: {
-		// 			userId,
-		// 			status: SmsStatusEnum.pending,
-		// 			provider: SmsProviderType.gateway,
-		// 			updatedAt: {
-		// 				[Op.lt]: oneHourAgo,
-		// 			},
-		// 		},
-		// 		order: [["updatedAt", "ASC"]],
-		// 		limit: size,
-		// 		offset,
-		// 	});
-		// 	finalCount = pendingResult.count;
-		// 	finalRows = pendingResult.rows;
-		// }
+		const validPhones = overdueUsersWithRent.map((u) => u.phone);
+
+		// 4. Faqat overdue renti bor SMS larni ajratamiz
+		const filteredDraftSms = rows.filter((sms) =>
+			validPhones.includes(sms.phone)
+		);
 
 		// SMS larni deviceId bilan yangilaymiz
-		const smsIds = finalRows.map((sms) => sms.id);
+		const smsIds = filteredDraftSms.map((sms) => sms.id);
 
 		if (smsIds.length > 0) {
-			// Agar draft bo'lsa, pending ga o'tkazamiz; agar pending bo'lsa, faqat deviceId ni yangilaymiz
-			if (count > 0) {
-				await Sms.update(
-					{ deviceId, status: SmsStatusEnum.pending },
-					{ where: { id: smsIds } }
-				);
-			} else {
-				await Sms.update({ deviceId }, { where: { id: smsIds } });
-			}
+			await Sms.update(
+				{ deviceId, status: SmsStatusEnum.pending },
+				{ where: { id: smsIds } }
+			);
 		}
 
 		return {
-			items: finalRows.map((sms) => ({
+			items: filteredDraftSms.map((sms) => ({
 				id: sms.id.toString(),
 				phone: "+998" + sms.phone,
 				text: sms.text,
 			})),
 			page,
 			size,
-			totalElements: finalCount,
-			totalPages: Math.ceil(finalCount / size),
-			last: offset + finalRows.length >= finalCount,
 		};
 	},
 
