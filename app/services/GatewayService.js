@@ -271,6 +271,8 @@ const GatewayService = {
 			offset,
 		});
 
+		const uniquePhones = [...new Set(rows.map((s) => s.phone))];
+
 		// 3. Shu raqamlar bo'yicha overdue rentlarni tekshiramiz
 		const overdueUsersWithRent = await sequelize.query(
 			`SELECT DISTINCT u.phone 
