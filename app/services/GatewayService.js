@@ -277,7 +277,7 @@ const GatewayService = {
 		const overdueUsersWithRent = await sequelize.query(
 			`SELECT DISTINCT u.phone 
 			FROM users u
-			INNER JOIN rent r ON u.id = r."userId"
+			INNER JOIN rents r ON u.id = r."userId"
 			WHERE u.phone IN (:phones)
 			  AND r."returnedAt" IS NULL
 			  AND r."returningDate" < NOW()
