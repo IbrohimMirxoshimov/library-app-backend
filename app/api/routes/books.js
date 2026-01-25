@@ -32,7 +32,9 @@ module.exports = (app) => {
 					.allow(null)
 					.uri()
 					.regex(isImagePattern)
-					.message("Rasm formati to'g'ri emas. Qabul qilinadi: jpg, jpeg, png"),
+					.message(
+						"Rasm formati to'g'ri emas. Qabul qilinadi: jpg, jpeg, png"
+					),
 			}).options({
 				allowUnknown: true,
 			}),
@@ -47,9 +49,12 @@ module.exports = (app) => {
 				name: Joi.string().required(),
 				image: Joi.string()
 					.optional()
+					.allow(null)
 					.uri()
 					.regex(isImagePattern)
-					.message("Rasm formati to'g'ri emas. Qabul qilinadi: jpg, jpeg, png"),
+					.message(
+						"Rasm formati to'g'ri emas. Qabul qilinadi: jpg, jpeg, png"
+					),
 			}).options({
 				allowUnknown: true,
 			}),
