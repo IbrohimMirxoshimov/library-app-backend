@@ -389,12 +389,12 @@ const RentController = {
 
 			res.json(result.toJSON()).status(201);
 
-			sendMessageFromTelegramBot(
-				DEV_ID,
-				`B: ${stock.book.id} D: ${getRentDurationInDays(req.body)} L: ${
-					stock.locationId
-				}\n${stock.book.name}`
-			).catch((e) => console.error(e));
+			// sendMessageFromTelegramBot(
+			// 	DEV_ID,
+			// 	`B: ${stock.book.id} D: ${getRentDurationInDays(req.body)} L: ${
+			// 		stock.locationId
+			// 	}\n${stock.book.name}`
+			// ).catch((e) => console.error(e));
 		} catch (e) {
 			await transaction.rollback();
 			next(e);
