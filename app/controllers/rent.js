@@ -1,10 +1,8 @@
 const { Sequelize, Op } = require("sequelize");
 const { getListOptions } = require("../api/middlewares/utils");
-const { DEV_ID } = require("../config");
 const UserStatus = require("../constants/UserStatus");
 const db = require("../database/models");
 const { Rent, Stock, User, Book, Comment } = db;
-const { sendMessageFromTelegramBot } = require("../services/Notifications");
 const { report } = require("../services/RentServices");
 const StatServices = require("../services/StatServices");
 const HttpError = require("../utils/HttpError");
@@ -13,6 +11,7 @@ const {
 	getRentDurationInDays,
 	getReturningDateIfIsNotWorkingDay,
 } = require("../utils/rent");
+
 const BLOCKING_LATE_TIME_FROM_LEASED_IN_DAYS = 70;
 const BLOCKING_LATE_TIME_FROM_LEASED_IN_MS =
 	BLOCKING_LATE_TIME_FROM_LEASED_IN_DAYS * 24 * 60 * 60 * 1000;
@@ -20,9 +19,33 @@ const BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS = 10;
 const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS =
 	BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS * 24 * 60 * 60 * 1000;
 async function isRequiredBook(book_id) {
-	return StatServices.getFewBooks({ cached: true }).then((books) =>
-		books.some((book) => book.bookId === book_id)
-	);
+	// Avval ma'lumotlar bazasidan 'few: 1' ekanligini tekshiramiz (manual flag).
+	// Bu eng yangi ma'lumot bo'lishini ta'minlaydi.
+	const book = await Book.findByPk(book_id, {
+		attributes: ["id", "few"],
+		paranoid: false,
+	});
+
+	if (book && book.few === 1) return true;
+
+	// Agar bazada 'few: 1' bo'lmasa, statistikadan (keshdan) tekshiramiz.
+	// StatServices.getFewBooks nafaqat manual flagni, balki kitobning qolgan soni,
+	// bandlik darajasi kabi statistik ko'rsatkichlarni ham hisobga oladi.
+	const books = await StatServices.getFewBooks({ cached: true });
+	const cachedBook = books.find((b) => b.bookId === book_id);
+
+	if (cachedBook) {
+		// Agar keshdagi ma'lumotda 'few: 1' bo'lsa, uni inobatga olmaymiz,
+		// chunki biz yuqorida bazadan tekshirdik va u yerda 'few' 1 emas edi.
+		// Bu kesh hali yangilanmaganligidan dalolat beradi.
+		if (cachedBook.few === 1) return false;
+
+		// Agar keshda bo'lsa va 'few: 1' bo'lmasa, demak u statistik ko'rsatkichlar
+		// (masalan, kam qolgani) sababli 'zarur kitoblar' ro'yxatiga tushgan.
+		return true;
+	}
+
+	return false;
 }
 
 function canGetMoreRents(active_rents_count, leased_rents) {
@@ -72,13 +95,14 @@ async function isUserActive(user_id) {
 	}).then(Boolean);
 }
 
-async function canGetMoreRentStrategy(stock, userId) {
+async function canGetMoreRentStrategy(stock, userId, libraryId) {
 	const active_rents_count = await Rent.count({
 		where: {
 			userId: userId,
 			returnedAt: {
 				[Op.is]: null,
 			},
+			locationId: libraryId,
 		},
 	});
 
@@ -90,8 +114,26 @@ async function canGetMoreRentStrategy(stock, userId) {
 	// Ballik tizimga o'tguncha yoki boshqa yechim topilgunicha
 
 	// agar kitobxonda faol ijara mavjud bo'lsa zarur kitob berilmaydi
-	if (await isRequiredBook(stock.bookId)) {
-		if ((await isUserVerified(userId)) && active_rents_count < 5) return;
+
+	const is_book_few = await isRequiredBook(stock.bookId);
+
+	if (is_book_few) {
+		// agar kitobxon tasdiqlangan holatda bo'lsa va faol ijaralari 5 tandan kam bo'lsa kitob berish mumkin
+
+		const is_verified_user = await isUserVerified(userId);
+
+		if (is_verified_user) {
+			if (active_rents_count < 5) {
+				return;
+			}
+
+			throw HttpError(
+				400,
+				"Tasdiqlangan kitobxon lekin 4 tadan ko'p kitobi mavjud. Zarur kitob berilmaydi"
+			);
+		}
+
+		// aks holda berilmadi
 		throw HttpError(
 			400,
 			"Qo'shimcha kitob sifatida berilmaydi. Zarur kitoblar ro'yxatiga kiritilgan!"
@@ -105,6 +147,7 @@ async function canGetMoreRentStrategy(stock, userId) {
 			returnedAt: {
 				[Op.is]: null,
 			},
+			locationId: libraryId,
 		},
 		include: {
 			model: Stock,
@@ -129,9 +172,10 @@ async function canGetMoreRentStrategy(stock, userId) {
 		if (await isRequiredBook(active_rent.stock.bookId)) {
 			if ((await isUserVerified(userId)) && active_rents_count < 5)
 				return;
+
 			throw HttpError(
 				400,
-				"Qo'shimcha kitob sifatida berilmaydi. Zarur kitoblar ro'yxatiga kiritilgan!"
+				"Kitobxonda qaytarilmagan zarur kitob mavjud. Qo'shimcha kitob berilmaydi"
 			);
 		}
 	}
@@ -143,19 +187,22 @@ async function canGetMoreRentStrategy(stock, userId) {
 	const all_rents_count = await Rent.count({
 		where: {
 			userId: userId,
+			locationId: libraryId,
 		},
 	});
 
 	const leased_rents = all_rents_count - active_rents_count;
 
 	if (!canGetMoreRents(active_rents_count, leased_rents)) {
-		if ((await isUserVerified(userId)) && active_rents_count < 5) return;
+		if (await isUserVerified(userId)) return;
+
 		throw HttpError(
 			400,
 			`Berilmaydi. Kitobxonda ${active_rents_count} ta faol ijara mavjud!`
 		);
 	}
 }
+
 async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 	if (!userId) {
 		throw HttpError(400, "User not found");
@@ -177,15 +224,32 @@ async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 	}
 
 	if (user.status === UserStatus.blocked) {
-		if (user.blockingReason) {
+		const active_rent = await Rent.findOne({
+			where: {
+				userId: userId,
+				returnedAt: {
+					[Op.is]: null,
+				},
+				locationId: libraryId,
+			},
+		});
+
+		if (active_rent) {
 			throw HttpError(
 				400,
-				user.blockingReason + `\nKitob ${bookPrice} so'm`
+				"Bloklangan kitobxonda qaytarilmagan kitob mavjud. Yangi kitob olish uchun avvalgisini qaytarish kerak."
 			);
 		}
 
 		if (user.balance >= bookPrice) {
 			return true;
+		}
+
+		if (user.blockingReason) {
+			throw HttpError(
+				400,
+				user.blockingReason + `\nKitob ${bookPrice} so'm`
+			);
 		}
 
 		throw HttpError(
@@ -235,7 +299,7 @@ async function checkToAdd(req) {
 	}
 
 	// Does user can get more books
-	await canGetMoreRentStrategy(stock, req.body.userId);
+	await canGetMoreRentStrategy(stock, req.body.userId, req.user.libraryId);
 
 	return stock;
 }
