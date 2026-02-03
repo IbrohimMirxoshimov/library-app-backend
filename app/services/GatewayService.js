@@ -386,8 +386,10 @@ const GatewayService = {
 
 			await Sms.bulkCreate(messages);
 
-			// Bitta push yuborish - Android app o'zi pending SMS larni oladi
-			await this.pushPendingSmsNotification(mainLibrarianId);
+			setTimeout(() => {
+				// Bitta push yuborish - Android app o'zi pending SMS larni oladi
+				this.pushPendingSmsNotification(mainLibrarianId);
+			}, 5000);
 
 			return {
 				totalCount: todayPhones.length,
