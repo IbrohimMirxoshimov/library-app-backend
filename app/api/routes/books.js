@@ -29,7 +29,7 @@ module.exports = (app) => {
 				name: Joi.string().required(),
 				image: Joi.string()
 					.optional()
-					.allow(null)
+					.allow(null, "")
 					.uri()
 					.regex(isImagePattern)
 					.message(
@@ -49,7 +49,7 @@ module.exports = (app) => {
 				name: Joi.string().required(),
 				image: Joi.string()
 					.optional()
-					.allow(null)
+					.allow(null, "")
 					.uri()
 					.regex(isImagePattern)
 					.message(
