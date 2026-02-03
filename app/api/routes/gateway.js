@@ -153,8 +153,6 @@ module.exports = (app) => {
 			}),
 		}),
 		async (req, res, next) => {
-			console.log("req.user", req.user);
-
 			try {
 				const result = await GatewayService.getPendingSms(
 					req.params.deviceId,
@@ -162,6 +160,7 @@ module.exports = (app) => {
 					parseInt(req.query.page),
 					parseInt(req.query.size)
 				);
+				console.log(result.items.length);
 
 				return res.status(200).json(result);
 			} catch (error) {
