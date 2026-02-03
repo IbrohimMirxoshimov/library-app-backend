@@ -271,31 +271,32 @@ const GatewayService = {
 			offset,
 		});
 
-		const uniquePhones = [...new Set(rows.map((s) => s.phone))];
+		// const uniquePhones = [...new Set(rows.map((s) => s.phone))];
 
 		// 3. Shu raqamlar bo'yicha overdue rentlarni tekshiramiz
-		const overdueUsersWithRent = await sequelize.query(
-			`SELECT DISTINCT u.phone 
-			FROM users u
-			INNER JOIN rents r ON u.id = r."userId"
-			WHERE u.phone IN (:phones)
-			  AND r."returnedAt" IS NULL
-			  AND r."returningDate" < NOW()
-			  AND r."deletedAt" IS NULL
-			  AND u."deletedAt" IS NULL
-			`,
-			{
-				replacements: { phones: uniquePhones },
-				type: sequelize.QueryTypes.SELECT,
-			}
-		);
+		// const overdueUsersWithRent = await sequelize.query(
+		// 	`SELECT DISTINCT u.phone
+		// 	FROM users u
+		// 	INNER JOIN rents r ON u.id = r."userId"
+		// 	WHERE u.phone IN (:phones)
+		// 	  AND r."returnedAt" IS NULL
+		// 	  AND r."returningDate" < NOW()
+		// 	  AND r."deletedAt" IS NULL
+		// 	  AND u."deletedAt" IS NULL
+		// 	`,
+		// 	{
+		// 		replacements: { phones: uniquePhones },
+		// 		type: sequelize.QueryTypes.SELECT,
+		// 	}
+		// );
 
-		const validPhones = overdueUsersWithRent.map((u) => u.phone);
+		// const validPhones = overdueUsersWithRent.map((u) => u.phone);
 
 		// 4. Faqat overdue renti bor SMS larni ajratamiz
-		const filteredDraftSms = rows.filter((sms) =>
-			validPhones.includes(sms.phone)
-		);
+		const filteredDraftSms = rows;
+		// .filter((sms) =>
+		// 	validPhones.includes(sms.phone)
+		// );
 
 		// SMS larni deviceId bilan yangilaymiz
 		const smsIds = filteredDraftSms.map((sms) => sms.id);
