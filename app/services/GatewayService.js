@@ -265,6 +265,9 @@ const GatewayService = {
 				userId,
 				status: SmsStatusEnum.draft,
 				provider: SmsProviderType.gateway,
+				createdAt: {
+					[Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000),
+				},
 			},
 			order: [["updatedAt", "ASC"]],
 			limit: size,
