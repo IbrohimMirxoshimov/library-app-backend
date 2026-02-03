@@ -262,7 +262,7 @@ const GatewayService = {
 		// Avval draft SMS larni qidiramiz
 		const { rows } = await Sms.findAndCountAll({
 			where: {
-				userId,
+				userId: userId,
 				status: SmsStatusEnum.draft,
 				provider: SmsProviderType.gateway,
 				createdAt: {
@@ -303,10 +303,11 @@ const GatewayService = {
 
 		// SMS larni deviceId bilan yangilaymiz
 		const smsIds = filteredDraftSms.map((sms) => sms.id);
+		console.log({ deviceId, userId });
 
 		if (smsIds.length > 0) {
 			await Sms.update(
-				{ deviceId, status: SmsStatusEnum.pending },
+				{ status: SmsStatusEnum.pending },
 				{ where: { id: smsIds } }
 			);
 		}
