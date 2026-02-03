@@ -408,6 +408,7 @@ const Crons = {
 		// this.rentExpiresBulkSmsCron();
 		this.createSmsForExpiredRentsCron();
 		this.superAdminNotifications();
+		this.pushPendingSmsNotificationCron();
 	},
 };
 
