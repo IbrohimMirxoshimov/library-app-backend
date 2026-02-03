@@ -320,7 +320,7 @@ LIMIT :size`,
 		return path.resolve(__dirname, `../../files/stats-${libraryId}.json`);
 	},
 
-	async isExpired(filePath, hours = 5) {
+	async isExpired(filePath, hours = 1) {
 		try {
 			const stat = await fs.stat(filePath);
 			const now = Date.now();
@@ -336,7 +336,7 @@ LIMIT :size`,
 	async getStats(libraryId = 1) {
 		const cachedPath = this.getCachedPath(libraryId);
 
-		const expired = production ? await this.isExpired(cachedPath, 5) : true;
+		const expired = production ? await this.isExpired(cachedPath, 1) : true;
 
 		if (!expired) {
 			const cached = await fs.readFile(cachedPath);
@@ -368,10 +368,8 @@ LIMIT :size`,
 		});
 	},
 	async getFewBooks({ locationId = 1, cached = false } = {}) {
-		if (cached) return this.getStats().then((r) => r.few_books);
-		// 3 tadan ko'p lekin 1 ta qolgan
-		// va umuman qolmagan kitoblar ro'yxatini oladigan statistika
-		// LIMIT 50
+		if (cached) return this.getStats(locationId).then((r) => r.few_books);
+
 		const books = await Book.findAll({
 			where: { few: 1 },
 			attributes: ["id", "name"],
@@ -386,19 +384,33 @@ LIMIT :size`,
 			limit: 100,
 		});
 
-		const [required_books] =
-			await sequelize.query(`SELECT count(s."bookId") total, s."bookId", b.name, sum(s.busy::int) busies 
-		FROM stocks s
-		INNER JOIN books b
-		ON b.id = "bookId"
-		WHERE b.few != 0 AND (b.few = 1 OR (s."deletedAt" IS NULL AND s."locationId" = ${locationId}))
-		GROUP BY s."bookId", b.name
-		HAVING 
-			count("bookId") = sum(busy::int) 
-			or (count("bookId") > 3 AND count("bookId") - sum(busy::int) = 1) 
-			or (count("bookId") > 5 AND (count("bookId") - sum(busy::int) < 4))
-		ORDER BY total DESC
-		LIMIT 100`);
+		// Maqsad: Berilgan lokatsiyada (locationId) zaxirasi tugayotgan (zarur) kitoblarni aniqlash.
+		// Mantiq (Yangi):
+		// 1. Agar bo'sh kitoblar soni (available) jami kitoblar sonining (total) kvadrat ildizidan kichik bo'lsa, bu kitob zarur.
+		//    Formula: total - busies < SQRT(total)
+		// 2. Optimizatsiya: Agar kitobdan faqat 1 dona bo'lsa va u band bo'lsa, u zarur deb hisoblanmaydi.
+		//    Shuning uchun total > 1 sharti qo'shildi.
+		// 3. Filter: `few = 1` bo'lganlar alohida (Book.findAll orqali) olinganligi uchun,
+		//    bu so'rovda faqat `few != 1` (manual belgilanmagan) kitoblar tekshiriladi.
+		const [required_books] = await sequelize.query(
+			`SELECT 
+				count(s.id) as total, 
+				s."bookId", 
+				b.name, 
+				sum(s.busy::int) as busies 
+			FROM stocks s
+			INNER JOIN books b ON b.id = s."bookId"
+			WHERE b.few != 1 AND s."deletedAt" IS NULL AND s."locationId" = :locationId
+			GROUP BY s."bookId", b.name
+			HAVING 
+				count(s.id) > 1 
+				AND (count(s.id) - sum(s.busy::int)) < sqrt(count(s.id))
+			ORDER BY total DESC
+			LIMIT 100`,
+			{
+				replacements: { locationId },
+			}
+		);
 
 		const ids = required_books.map((b) => b.bookId);
 
