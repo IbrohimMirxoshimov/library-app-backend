@@ -256,7 +256,7 @@ const GatewayService = {
 	 * Android app bu API orqali draft SMS larni oladi va birma-bir yuboradi.
 	 * Agar draft SMS yo'q bo'lsa, 1 soatdan ko'proq vaqt o'tgan pending SMS larni qaytaradi.
 	 */
-	async getPendingSms(deviceId, userId, page = 1, size = 10) {
+	async getPendingSms(deviceId, userId = 190, page = 1, size = 10) {
 		const offset = (page - 1) * size;
 
 		// Avval draft SMS larni qidiramiz
