@@ -383,6 +383,19 @@ const Crons = {
 		);
 		job.start();
 	},
+	pushPendingSmsNotificationCron() {
+		const job = new CronJob(
+			// At minute 5 past every hour from 9 through 22
+			"5 9-22 * * *",
+			() => {
+				GatewayService.pushPendingSmsNotification();
+			},
+			null,
+			true,
+			"Asia/Tashkent"
+		);
+		job.start();
+	},
 	loadCrons() {
 		this.groupNotifications.startSendingRentLeaseAndReturnInfoEveryDaylyCron();
 		this.groupNotifications.startSendingRentLeaseAndReturnInfoEveryHourCron();
