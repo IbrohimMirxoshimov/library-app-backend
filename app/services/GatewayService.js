@@ -12,6 +12,7 @@ const fs = require("fs").promises;
 const path = require("path");
 
 // Fayl bilan ishlash uchun utility'lar
+const DEFAULT_LIBRARIAN_ID = 190;
 const PENDING_RENTS_FILE = path.join(
 	__dirname,
 	"../../files/pending-expired-rents.json"
@@ -218,7 +219,7 @@ const GatewayService = {
 	 * Pending SMS mavjudligi haqida bitta push yuborish.
 	 * Android app bu pushni qabul qilganda o'zi pending SMS larni oladi.
 	 */
-	async pushPendingSmsNotification(userId) {
+	async pushPendingSmsNotification(userId = DEFAULT_LIBRARIAN_ID) {
 		if (!initFCM()) return false;
 
 		const device = await Device.findOne({
@@ -366,17 +367,16 @@ const GatewayService = {
 
 			if (todayPhones.length === 0) return { totalCount: 0 };
 
-			const mainLibrarianId = 190;
 			const smsbulk = await SmsBulk.create({
 				text: "Avto yasalgan",
-				userId: mainLibrarianId,
+				userId: DEFAULT_LIBRARIAN_ID,
 			});
 
 			const messages = todayPhones.map((phone) => {
 				const rent = newRentsByPhone[phone];
 				return {
 					phone: phone,
-					userId: mainLibrarianId,
+					userId: DEFAULT_LIBRARIAN_ID,
 					text: SmsTemplates.rentExpiredWithCustomLinkNew.getText({
 						fullName: `${rent.user.firstName} ${rent.user.lastName}`,
 						url_param: rent.user.phone,
@@ -392,7 +392,7 @@ const GatewayService = {
 
 			setTimeout(() => {
 				// Bitta push yuborish - Android app o'zi pending SMS larni oladi
-				this.pushPendingSmsNotification(mainLibrarianId);
+				this.pushPendingSmsNotification(DEFAULT_LIBRARIAN_ID);
 			}, 5000);
 
 			return {
