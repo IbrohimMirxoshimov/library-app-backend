@@ -274,6 +274,7 @@ const GatewayService = {
 			limit: size,
 			offset,
 		});
+		console.log({ l: rows.length });
 
 		// const uniquePhones = [...new Set(rows.map((s) => s.phone))];
 
@@ -304,7 +305,7 @@ const GatewayService = {
 
 		// SMS larni deviceId bilan yangilaymiz
 		const smsIds = filteredDraftSms.map((sms) => sms.id);
-		console.log({ deviceId, userId });
+		console.log({ deviceId, userId, idsl: smsIds.length });
 
 		if (smsIds.length > 0) {
 			await Sms.update(
