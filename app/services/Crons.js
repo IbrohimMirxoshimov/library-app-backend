@@ -407,7 +407,7 @@ const Crons = {
 		this.mainChannelNotifications.lastWeekStats();
 		// this.rentExpiresBulkSmsCron();
 		this.createSmsForExpiredRentsCron();
-		this.superAdminNotifications();
+		// this.superAdminNotifications();
 		this.pushPendingSmsNotificationCron();
 	},
 };
