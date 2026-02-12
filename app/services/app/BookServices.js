@@ -10,7 +10,11 @@ const { getListOptions } = require("../../api/middlewares/utils");
 
 function getObjectAvailable(object) {
 	for (const key in object) {
-		if (!object[key]) {
+		if (
+			object[key] === undefined ||
+			object[key] === null ||
+			object[key] === ""
+		) {
 			delete object[key];
 		}
 	}
@@ -58,8 +62,11 @@ module.exports = {
 	},
 	async getList(query, locationId) {
 		const stockWhere = getObjectAvailable({
-			locationId: locationId || 1,
-			busy: query.busy,
+			locationId: parseInt(locationId) || 1,
+			busy:
+				query.busy !== undefined
+					? query.busy === "true" || query.busy === true
+					: false,
 		});
 
 		const result = await Book.findAndCountAll(
