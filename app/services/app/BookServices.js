@@ -99,13 +99,6 @@ module.exports = {
 						// Use subQuery for proper pagination
 						subQuery: false,
 						attributes: BookOptions.attributes,
-						// Main filtering: only books that have stocks matching criteria
-						where: Sequelize.literal(`EXISTS (
-							SELECT 1 FROM stocks 
-							WHERE stocks."bookId" = books.id 
-							AND stocks."locationId" = ${stockWhere.locationId}
-							${stockWhere.busy !== undefined ? `AND stocks.busy = ${stockWhere.busy}` : ""}
-						)`),
 					},
 				},
 				Book,
@@ -123,7 +116,18 @@ module.exports = {
 						attributes: ["name"],
 						required: true, // INNER JOIN
 					},
-				]
+				],
+				Sequelize.literal(`EXISTS (
+					SELECT 1 FROM "stocks" AS "stocks"
+					WHERE "stocks"."bookId" = "books"."id" 
+					AND "stocks"."locationId" = ${stockWhere.locationId}
+					AND "stocks"."deletedAt" IS NULL
+					${
+						stockWhere.busy !== undefined
+							? `AND "stocks"."busy" = ${stockWhere.busy}`
+							: ""
+					}
+				)`)
 			)
 		);
 
