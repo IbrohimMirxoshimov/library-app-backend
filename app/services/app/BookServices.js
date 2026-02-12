@@ -66,7 +66,7 @@ module.exports = {
 			busy:
 				query.busy !== undefined
 					? query.busy === "true" || query.busy === true
-					: false,
+					: undefined,
 		});
 
 		const result = await Book.findAndCountAll(
