@@ -35,9 +35,13 @@ function getListOptions(
 				Sequelize.where(
 					Sequelize.fn(
 						"concat",
-						(Model.rawAttributes[s] && Sequelize.col(`${Model.name}.${s}`)) ||
+						(Model.rawAttributes[s] &&
+							Sequelize.col(`${Model.name}.${s}`)) ||
 							"",
-						Sequelize.cast(Sequelize.col(`${Model.name}.id`), "varchar")
+						Sequelize.cast(
+							Sequelize.col(`${Model.name}.id`),
+							"varchar"
+						)
 					),
 					{ [Op.iLike]: `%${q}%` }
 				)
@@ -70,7 +74,7 @@ function getListOptions(
 	}
 
 	if (where.length) {
-		options.where = where;
+		options.where = { [Op.and]: where };
 	}
 
 	if (getInclude) {
