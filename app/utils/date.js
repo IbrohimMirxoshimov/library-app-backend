@@ -66,7 +66,10 @@ const month = [
 ];
 
 function getDateMonthInUzbek(date = new Date()) {
-	return month[date.getMonth()];
+	const tashkentMonth = new Date(
+		date.toLocaleString("en-US", { timeZone: "Asia/Tashkent" })
+	).getMonth();
+	return month[tashkentMonth];
 }
 
 module.exports = {

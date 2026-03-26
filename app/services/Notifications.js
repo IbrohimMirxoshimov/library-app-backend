@@ -91,9 +91,9 @@ const Notifications = {
 		 */
 		generateStatsText(header, stats) {
 			return `<b>${header}
-${new Date(stats.from_date).toLocaleDateString("ru")} - ${new Date(
+${new Date(stats.from_date).toLocaleDateString("ru", { timeZone: "Asia/Tashkent" })} - ${new Date(
 				stats.untill_date
-			).toLocaleDateString("ru")}
+			).toLocaleDateString("ru", { timeZone: "Asia/Tashkent" })}
 
 📖 O'qish uchun olingan kitoblar soni: ${stats.rents_count}
 🧑‍🚀 Yangi kitobxonlar: ${stats.new_users}

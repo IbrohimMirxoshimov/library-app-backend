@@ -27,7 +27,12 @@ function getStatusEmoji(rent) {
 }
 
 function getTime(rent) {
-	return rent.updatedAt.toTimeString().slice(0, 5);
+	return rent.updatedAt.toLocaleTimeString("ru", {
+		timeZone: "Asia/Tashkent",
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	});
 }
 
 function getBookName(rent) {
