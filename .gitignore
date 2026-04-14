@@ -1,7 +1,28 @@
-node_modules
-package-lock.json
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Build
+dist/
+
+# Environment
 .env
+
+# OS
 .DS_Store
+
+# Legacy
 data.json
-files
+files/
 firebase-service-account.json
+package-lock.json
+
+# Uploads
+uploads/
+
+# IDE
+.idea/
+.vscode/
+
+# Prisma
+prisma/migrations/**/migration_lock.toml

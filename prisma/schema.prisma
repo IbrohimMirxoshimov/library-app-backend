@@ -1,0 +1,832 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator jsonTypes {
+  provider = "prisma-json-types-generator"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================
+// ENUMS
+// =============================================
+
+/// User gender
+enum Gender {
+  MALE
+  FEMALE
+}
+
+/// User account status
+enum UserStatus {
+  ACTIVE   // Can use the system normally
+  BLOCKED  // Cannot rent books (auto or manual)
+}
+
+/// Stock physical condition/status
+enum StockStatus {
+  ACTIVE     // Available for rental
+  INACTIVE   // Temporarily unavailable
+  BANNED     // Prohibited from circulation
+  REPAIRING  // Sent for repair
+  LOST       // Missing/unaccounted for
+  STOLEN     // Confirmed stolen
+  DAMAGED    // Physically damaged, not usable
+}
+
+/// Physical condition of a book copy
+enum StockCondition {
+  NEW       // Yangi
+  GOOD      // Yaxshi
+  FAIR      // O'rtacha
+  POOR      // Yomon
+}
+
+/// SMS delivery status
+enum SmsStatus {
+  DRAFT      // Created, not yet sent
+  PENDING    // Queued for sending
+  SENT       // Sent to provider/device
+  DELIVERED  // Confirmed delivered
+  ERROR      // Failed to deliver
+}
+
+/// SMS provider/channel
+enum SmsProvider {
+  PLAY_MOBILE  // PlayMobile API
+  ESKIZ        // Eskiz API
+  MANUAL       // Manually recorded
+  GATEWAY      // Android device gateway via FCM
+}
+
+/// Book language
+enum BookLanguage {
+  UZ // O'zbek (lotin)
+  OZ // O'zbek (kirill)
+  RU // Rus
+  EN // Ingliz
+  AR // Arab
+}
+
+/// Book rarity level — determines rental eligibility rules
+enum BookRarity {
+  COMMON     // Oddiy — anyone can rent
+  UNCOMMON   // Kam tarqalgan — verified users preferred
+  RARE       // Noyob — strict conditions apply
+  RESTRICTED // Cheklangan — special permission required
+}
+
+// =============================================
+// AUTH & RBAC
+// =============================================
+
+/// System user — both library members (readers) and staff
+model User {
+  id Int @id @default(autoincrement())
+
+  /// First name (capitalized on save)
+  firstName String
+
+  /// Last name (capitalized on save)
+  lastName String
+
+  /// Login username (optional, for admin panel login)
+  username String? @unique
+
+  /// Primary phone number (9 digits without +998 prefix)
+  phone String?
+
+  /// Additional phone numbers (relatives, emergency contacts)
+  extraPhones String[] @default([])
+
+  /// User gender for statistics and filtering
+  gender Gender?
+
+  /// Date of birth
+  birthDate DateTime?
+
+  /// Hashed password for admin panel login
+  password String?
+
+  /// Whether user's identity has been verified by librarian
+  verified Boolean @default(false)
+
+  /// Whether primary phone number is confirmed via SMS code
+  phoneVerified Boolean @default(false)
+
+  /// Account status — ACTIVE or BLOCKED
+  status UserStatus @default(ACTIVE)
+
+  /// User's monetary balance (in so'm)
+  balance Int @default(0)
+
+  /// Reason why user was blocked (set when status=BLOCKED)
+  blockingReason String?
+
+  /// Telegram user ID for bot integration
+  telegramId String? @unique
+
+  /// Additional notes/info about the user (free text)
+  extra String?
+
+  /// Role determines permissions — null means regular reader with no admin access
+  roleId Int?
+  role   Role? @relation(fields: [roleId], references: [id])
+
+  /// For ADMIN users: the single library they manage
+  adminLibraryId Int?
+  adminLibrary   Library? @relation("AdminLibrary", fields: [adminLibraryId], references: [id])
+
+  /// User's physical address
+  addressId Int?
+  address   Address? @relation(fields: [addressId], references: [id])
+
+  /// Who created this user record
+  creatorId    Int?
+  creator      User?  @relation("UserCreator", fields: [creatorId], references: [id])
+  createdUsers User[] @relation("UserCreator")
+
+  // === Reverse relations ===
+  passports       Passport[]
+  libraries       UserLibrary[]
+  rentalsAsReader Rental[]  @relation("RentalReader")
+  rentalsIssued   Rental[]  @relation("RentalIssuer")
+  rentalsReturned Rental[]  @relation("RentalReturner")
+  devices         Device[]
+  smsMessages     Sms[]
+  smsBulks        SmsBulk[]
+  createdBooks    Book[]    @relation("BookCreator")
+  createdAuthors  Author[]  @relation("AuthorCreator")
+  sourceStocks    Stock[]   @relation("StockSource")
+  comments        Comment[] @relation("CommentAuthor")
+  auditLogs       AuditLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([phone])
+  @@index([telegramId])
+  @@index([adminLibraryId])
+  @@map("users")
+}
+
+/// Join table: which readers belong to which libraries
+model UserLibrary {
+  id Int @id @default(autoincrement())
+
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  libraryId Int
+  library   Library @relation(fields: [libraryId], references: [id])
+
+  /// When the reader was added to this library
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, libraryId])
+  @@map("user_libraries")
+}
+
+/// RBAC Role — groups permissions together
+model Role {
+  id Int @id @default(autoincrement())
+
+  /// Human-readable role name (e.g. "owner", "moderator", "librarian")
+  name String @unique
+
+  /// Optional description of what this role is for
+  description String?
+
+  /// Array of permission numeric values from PERMISSIONS constant
+  permissions Int[] @default([])
+
+  users User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+// =============================================
+// PASSPORT — separate from User, 1:N
+// =============================================
+
+/// User's passport/ID document information
+model Passport {
+  id Int @id @default(autoincrement())
+
+  /// Passport series and number (e.g. "AA1234567")
+  passportId String @unique
+
+  /// Personal identification number (unique per user, not per passport)
+  pinfl String?
+
+  /// Local file path to passport image/scan
+  image String?
+
+  /// Whether this is the currently active passport
+  isActive Boolean @default(true)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("passports")
+}
+
+// =============================================
+// LIBRARY (was "location" in old system)
+// =============================================
+
+/// A library branch/location
+model Library {
+  id Int @id @default(autoincrement())
+
+  /// Library branch name
+  name String @unique
+
+  /// External link (website, social media)
+  link String?
+
+  /// Whether this library is currently operating
+  active Boolean @default(true)
+
+  /// Additional info about the library
+  description String?
+
+  /// Working schedule configuration (JSON)
+  /// { "weekends": ["friday", "sunday"], "holidays": ["2026-01-01", "2026-03-21"] }
+  /// [LibrarySchedule]
+  schedule Json?
+
+  /// Physical address
+  addressId Int?     @unique
+  address   Address? @relation(fields: [addressId], references: [id])
+
+  // === Reverse relations ===
+  adminUsers User[]        @relation("AdminLibrary")
+  members    UserLibrary[]
+  stocks     Stock[]
+  rentals    Rental[]
+  devices    Device[]
+  bookRules  BookRule[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("libraries")
+}
+
+// =============================================
+// ADDRESS & REGIONS
+// =============================================
+
+/// Physical address
+model Address {
+  id Int @id @default(autoincrement())
+
+  /// ISO country code
+  countryCode String @default("uz")
+
+  /// Full address text
+  addressLine String?
+
+  /// Street name
+  street String?
+
+  /// House/building number
+  home String?
+
+  /// GPS latitude
+  latitude Float?
+
+  /// GPS longitude
+  longitude Float?
+
+  /// Region (viloyat/shahar) this address belongs to
+  regionId Int?
+  region   Region? @relation("AddressRegion", fields: [regionId], references: [id])
+
+  /// Town (tuman/shaharcha) this address belongs to
+  townId Int?
+  town   Region? @relation("AddressTown", fields: [townId], references: [id])
+
+  // === Reverse relations ===
+  users   User[]
+  library Library?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("addresses")
+}
+
+/// Geographic region with self-referencing parent/child hierarchy
+model Region {
+  id Int @id @default(autoincrement())
+
+  /// Region or town/district name
+  name String @unique
+
+  /// Parent region ID — null means top-level region
+  parentId Int?
+  parent   Region?  @relation("RegionHierarchy", fields: [parentId], references: [id])
+  children Region[] @relation("RegionHierarchy")
+
+  addresses     Address[] @relation("AddressRegion")
+  townAddresses Address[] @relation("AddressTown")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("regions")
+}
+
+// =============================================
+// BOOKS
+// =============================================
+
+/// A book title (not a physical copy — that's Stock)
+model Book {
+  id Int @id @default(autoincrement())
+
+  /// Book title — NOT unique (duplicate check via searchableName)
+  name String
+
+  /// Book description/summary
+  description String?
+
+  /// Cover images (local file paths)
+  images String[] @default([])
+
+  /// ISBN code
+  isbn String?
+
+  /// Book language
+  language BookLanguage @default(UZ)
+
+  /// Searchable name — auto-generated from name + author names
+  /// Cyrillic to Latin, only alphanumeric, for fast search
+  searchableName String?
+
+  /// Sort order for display
+  sort Int @default(0)
+
+  /// Tags for categorization (free-form strings)
+  tags String[] @default([])
+
+  /// Collection this book belongs to
+  collectionId Int?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+
+  /// Who added this book to the system
+  creatorId Int?
+  creator   User? @relation("BookCreator", fields: [creatorId], references: [id])
+
+  // === Relations ===
+  authors  BookAuthor[]
+  editions BookEdition[]
+  stocks   Stock[]
+  rules    BookRule[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([searchableName])
+  @@map("books")
+}
+
+/// Join table: Book <-> Author (many-to-many)
+model BookAuthor {
+  id Int @id @default(autoincrement())
+
+  bookId   Int
+  book     Book   @relation(fields: [bookId], references: [id])
+  authorId Int
+  author   Author @relation(fields: [authorId], references: [id])
+
+  /// Author's role for this book (e.g. "author", "translator", "editor")
+  role String @default("author")
+
+  @@unique([bookId, authorId])
+  @@map("book_authors")
+}
+
+/// A specific edition/print run of a book
+model BookEdition {
+  id Int @id @default(autoincrement())
+
+  /// Number of pages in this edition
+  pages Int?
+
+  /// Publication/print date
+  printedAt DateTime?
+
+  /// ISBN for this specific edition
+  isbn String?
+
+  /// Edition/print run number (e.g. "2-nashr")
+  editionNumber String?
+
+  /// Cover/content images for this edition
+  images String[] @default([])
+
+  /// Which book title this is an edition of
+  bookId Int
+  book   Book @relation(fields: [bookId], references: [id])
+
+  /// Publisher of this edition
+  publisherId Int?
+  publisher   Publisher? @relation(fields: [publisherId], references: [id])
+
+  stocks Stock[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("book_editions")
+}
+
+/// Library-specific rules for a book — price, rental duration, rarity
+model BookRule {
+  id Int @id @default(autoincrement())
+
+  /// Rental price in so'm for this book at this library
+  price Int @default(50000)
+
+  /// Max rental duration in days
+  rentDuration Int @default(15)
+
+  /// How rare/valuable this book is — affects who can rent it
+  rarity BookRarity @default(COMMON)
+
+  bookId    Int
+  book      Book    @relation(fields: [bookId], references: [id])
+  libraryId Int
+  library   Library @relation(fields: [libraryId], references: [id])
+
+  stocks Stock[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bookId, libraryId])
+  @@map("book_rules")
+}
+
+/// Book author
+model Author {
+  id Int @id @default(autoincrement())
+
+  /// Author's full name
+  name String
+
+  /// Searchable name — same logic as Book.searchableName
+  searchableName String?
+
+  /// Author photo/images
+  images String[] @default([])
+
+  creatorId Int?
+  creator   User? @relation("AuthorCreator", fields: [creatorId], references: [id])
+
+  books BookAuthor[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([searchableName])
+  @@map("authors")
+}
+
+/// Book collection/category
+model Collection {
+  id Int @id @default(autoincrement())
+
+  /// Collection name (e.g. "Badiiy adabiyot")
+  name String @unique
+
+  /// Display order
+  sort Int @default(0)
+
+  books Book[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("collections")
+}
+
+/// Book publisher
+model Publisher {
+  id Int @id @default(autoincrement())
+
+  /// Publisher name
+  name String @unique
+
+  /// Publisher logo
+  image String?
+
+  editions BookEdition[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("publishers")
+}
+
+// =============================================
+// STOCK & RENTAL
+// =============================================
+
+/// A physical copy of a book at a specific library
+model Stock {
+  id Int @id @default(autoincrement())
+
+  /// Whether this copy is currently rented out
+  busy Boolean @default(false)
+
+  /// Physical condition/availability status
+  status StockStatus @default(ACTIVE)
+
+  /// Which book title this is a copy of
+  bookId Int
+  book   Book @relation(fields: [bookId], references: [id])
+
+  /// Which specific edition (optional)
+  bookEditionId Int?
+  bookEdition   BookEdition? @relation(fields: [bookEditionId], references: [id])
+
+  /// Library-specific rules that apply to this copy
+  bookRuleId Int?
+  bookRule   BookRule? @relation(fields: [bookRuleId], references: [id])
+
+  /// Physical condition of this copy (optional)
+  condition StockCondition?
+
+  /// Source — who donated/provided this book (references a User record)
+  sourceId Int?
+  source   User? @relation("StockSource", fields: [sourceId], references: [id])
+
+  /// Which library holds this copy
+  libraryId Int
+  library   Library @relation(fields: [libraryId], references: [id])
+
+  rentals  Rental[]
+  comments Comment[] @relation("StockComments")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([libraryId, busy])
+  @@index([bookId])
+  @@index([libraryId, bookId])
+  @@map("stocks")
+}
+
+/// A book rental transaction
+model Rental {
+  id Int @id @default(autoincrement())
+
+  /// When the book was issued to the reader
+  issuedAt DateTime
+
+  /// When the book is due to be returned
+  dueDate DateTime
+
+  /// When the book was actually returned (null = still out)
+  returnedAt DateTime?
+
+  /// Manual reference ID (can be alphanumeric)
+  referenceId String?
+
+  /// Whether this rental was rejected/cancelled
+  rejected Boolean @default(false)
+
+  /// Optional note (e.g. "kitob shikastlangan", reject reason)
+  note String?
+
+  /// The reader who borrowed the book
+  readerId Int
+  reader   User @relation("RentalReader", fields: [readerId], references: [id])
+
+  /// Which physical copy was rented
+  stockId Int
+  stock   Stock @relation(fields: [stockId], references: [id])
+
+  /// Which library this rental belongs to
+  libraryId Int
+  library   Library @relation(fields: [libraryId], references: [id])
+
+  /// Librarian who issued the book
+  issuedById Int
+  issuedBy   User @relation("RentalIssuer", fields: [issuedById], references: [id])
+
+  /// Librarian who accepted the return (null until returned)
+  returnedById Int?
+  returnedBy   User? @relation("RentalReturner", fields: [returnedById], references: [id])
+
+  comments Comment[] @relation("RentalComments")
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([readerId])
+  @@index([libraryId])
+  @@index([dueDate])
+  @@map("rentals")
+}
+
+// =============================================
+// COMMENT — polymorphic, for Stock and Rental
+// =============================================
+
+/// Comment/note attached to a stock item or rental
+model Comment {
+  id Int @id @default(autoincrement())
+
+  /// Comment text
+  text String
+
+  /// FK to stock (null if this comment is for a rental)
+  stockId Int?
+  stock   Stock? @relation("StockComments", fields: [stockId], references: [id])
+
+  /// FK to rental (null if this comment is for a stock)
+  rentalId Int?
+  rental   Rental? @relation("RentalComments", fields: [rentalId], references: [id])
+
+  /// Who wrote this comment
+  authorId Int?
+  author   User? @relation("CommentAuthor", fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([stockId])
+  @@index([rentalId])
+  @@map("comments")
+}
+
+// =============================================
+// SMS SYSTEM
+// =============================================
+
+/// Individual SMS message record
+model Sms {
+  id Int @id @default(autoincrement())
+
+  /// Recipient phone number (9 digits)
+  phone String
+
+  /// SMS text content
+  text String?
+
+  /// Current delivery status
+  status SmsStatus @default(DRAFT)
+
+  /// Error description if delivery failed
+  errorReason String?
+
+  /// Which provider sent this SMS
+  provider SmsProvider?
+
+  /// Provider's message ID for tracking
+  providerMessageId String?
+
+  /// When the SMS was received (for incoming SMS via gateway)
+  receivedAt DateTime?
+
+  /// User this SMS is related to
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
+
+  /// Bulk send batch this SMS belongs to
+  smsBulkId Int?
+  smsBulk   SmsBulk? @relation(fields: [smsBulkId], references: [id])
+
+  /// Device that sent/will send this SMS
+  deviceId Int?
+  device   Device? @relation(fields: [deviceId], references: [id])
+
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, phone, updatedAt])
+  @@index([userId, updatedAt])
+  @@map("sms")
+}
+
+/// Bulk SMS sending batch
+model SmsBulk {
+  id Int @id @default(autoincrement())
+
+  /// Template text for this batch
+  text String
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  messages Sms[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("sms_bulks")
+}
+
+// =============================================
+// DEVICE (SMS GATEWAY)
+// =============================================
+
+/// Android device registered for SMS gateway
+model Device {
+  id Int @id @default(autoincrement())
+
+  /// Device brand (e.g. "Samsung")
+  brand String?
+
+  /// Device model (e.g. "Galaxy S21")
+  model String?
+
+  /// Android build ID
+  buildId String?
+
+  /// Firebase Cloud Messaging token for push notifications
+  fcmToken String
+
+  /// Whether this device is active for SMS sending
+  enabled Boolean @default(true)
+
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  libraryId Int?
+  library   Library? @relation(fields: [libraryId], references: [id])
+
+  smsMessages Sms[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("devices")
+}
+
+// =============================================
+// AUDIT LOG
+// =============================================
+
+/// Tracks all admin write operations for accountability
+model AuditLog {
+  id Int @id @default(autoincrement())
+
+  /// What operation was performed (CREATE, UPDATE, DELETE)
+  action String
+
+  /// Which table/entity was affected (e.g. "books", "rentals")
+  resource String
+
+  /// ID of the affected record
+  resourceId Int
+
+  /// State before the change (null for CREATE)
+  /// [Record<string, unknown>]
+  oldData Json?
+
+  /// State after the change (null for DELETE)
+  /// [Record<string, unknown>]
+  newData Json?
+
+  /// Client IP address
+  ip String?
+
+  /// Client user agent string
+  userAgent String?
+
+  /// Who performed the action
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([resource, resourceId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

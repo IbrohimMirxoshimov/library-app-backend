@@ -1,0 +1,111 @@
+/**
+ * Permission numeric constants.
+ * Each permission is a unique integer.
+ * Stored as Int[] in Role.permissions column.
+ * Used with @RequirePermissions() decorator.
+ */
+export const PERMISSIONS = {
+  // Books
+  CREATE_BOOKS: 1,
+  READ_BOOKS: 2,
+  UPDATE_BOOKS: 3,
+  DELETE_BOOKS: 4,
+
+  // Authors
+  CREATE_AUTHORS: 11,
+  READ_AUTHORS: 12,
+  UPDATE_AUTHORS: 13,
+  DELETE_AUTHORS: 14,
+
+  // Collections
+  CREATE_COLLECTIONS: 21,
+  READ_COLLECTIONS: 22,
+  UPDATE_COLLECTIONS: 23,
+  DELETE_COLLECTIONS: 24,
+
+  // Publishers
+  CREATE_PUBLISHERS: 31,
+  READ_PUBLISHERS: 32,
+  UPDATE_PUBLISHERS: 33,
+  DELETE_PUBLISHERS: 34,
+
+  // Book Editions
+  CREATE_BOOK_EDITIONS: 41,
+  READ_BOOK_EDITIONS: 42,
+  UPDATE_BOOK_EDITIONS: 43,
+  DELETE_BOOK_EDITIONS: 44,
+
+  // Book Rules
+  CREATE_BOOK_RULES: 51,
+  READ_BOOK_RULES: 52,
+  UPDATE_BOOK_RULES: 53,
+  DELETE_BOOK_RULES: 54,
+
+  // Stocks
+  CREATE_STOCKS: 101,
+  READ_STOCKS: 102,
+  UPDATE_STOCKS: 103,
+  DELETE_STOCKS: 104,
+
+  // Rentals
+  CREATE_RENTALS: 111,
+  READ_RENTALS: 112,
+  UPDATE_RENTALS: 113,
+  DELETE_RENTALS: 114,
+
+  // Users
+  CREATE_USERS: 201,
+  READ_USERS: 202,
+  UPDATE_USERS: 203,
+  DELETE_USERS: 204,
+
+  // Roles
+  CREATE_ROLES: 211,
+  READ_ROLES: 212,
+  UPDATE_ROLES: 213,
+  DELETE_ROLES: 214,
+
+  // Libraries
+  CREATE_LIBRARIES: 301,
+  READ_LIBRARIES: 302,
+  UPDATE_LIBRARIES: 303,
+  DELETE_LIBRARIES: 304,
+
+  // Regions
+  CREATE_REGIONS: 311,
+  READ_REGIONS: 312,
+  UPDATE_REGIONS: 313,
+  DELETE_REGIONS: 314,
+
+  // SMS
+  CREATE_SMS: 401,
+  READ_SMS: 402,
+  UPDATE_SMS: 403,
+  DELETE_SMS: 404,
+
+  // Gateway
+  CREATE_GATEWAY: 411,
+  READ_GATEWAY: 412,
+  UPDATE_GATEWAY: 413,
+  DELETE_GATEWAY: 414,
+
+  // Stats
+  READ_STATS: 501,
+
+  // Audit Logs
+  READ_AUDIT_LOGS: 601,
+
+  // Passports
+  CREATE_PASSPORTS: 701,
+  READ_PASSPORTS: 702,
+  UPDATE_PASSPORTS: 703,
+
+  // Verification
+  SEND_VERIFICATION: 801,
+  VERIFY_CODE: 802,
+} as const;
+
+export type PermissionValue = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+/** All permission values as array — used for owner role seed */
+export const ALL_PERMISSIONS: number[] = Object.values(PERMISSIONS);
