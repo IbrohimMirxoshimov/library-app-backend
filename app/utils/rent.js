@@ -53,32 +53,36 @@ function getReportText({ count, rows }) {
 }
 
 function getLibraryHolidays() {
+	// Friday is already a day off (handled in getAvailableDayForReturn),
+	// so any holiday that lands on a Friday is intentionally omitted below.
 	return [
-		"2024-12-31",
-		"2025-01-01",
-		"2025-01-02",
-		"2025-01-03",
-		// eid al fitr 
-		"2025-03-30",
-		"2025-03-31",
-		"2025-04-01",
-		// 9 - may
-		"2025-05-09",
-		// eid al adha
-		"2025-06-06",
-		"2025-06-07",
-		"2025-06-08",
-		// independent day
-		"2025-08-31",
-		"2025-09-01",
-		"2025-09-02",
-		// teachers day
-		"2025-10-01",
-		// new year
-		"2025-12-31",
-		"2026-01-01",
-		"2026-01-02",
-		"2026-01-03",
+		// new year — 31 Dec 2025 .. 4 Jan 2026 (02 Jan is Friday)
+		"2025-12-31", // Wed
+		"2026-01-01", // Thu
+		"2026-01-03", // Sat
+		"2026-01-04", // Sun
+		// women's day — 7..9 Mar
+		"2026-03-07", // Sat
+		"2026-03-08", // Sun
+		"2026-03-09", // Mon
+		// navruz + eid al fitr — 21..23 Mar
+		"2026-03-21", // Sat
+		"2026-03-22", // Sun
+		"2026-03-23", // Mon
+		// memorial day (9 may) — 9..11 May
+		"2026-05-09", // Sat
+		"2026-05-10", // Sun
+		"2026-05-11", // Mon
+		// eid al adha — 28..31 May (29 May is Friday)
+		"2026-05-27", // Wed
+		"2026-05-28", // Thu
+		"2026-05-30", // Sat
+		// independence day
+		"2026-09-01", // Tue
+		// new year — 31 Dec 2026 .. 3 Jan 2027 (01 Jan is Friday)
+		"2026-12-31", // Thu
+		"2027-01-01", // Fri
+		"2027-01-02", // Sat
 	];
 }
 
