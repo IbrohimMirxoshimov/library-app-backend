@@ -19,6 +19,10 @@ const Location = sequelize.define(
 		description: {
 			type: DataTypes.TEXT,
 		},
+		telegramChatId: {
+			type: DataTypes.STRING,
+			allowNull: true,
+		},
 	},
 	{
 		paranoid: true,

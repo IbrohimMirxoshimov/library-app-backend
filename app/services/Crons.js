@@ -1,5 +1,13 @@
 const { Op } = require("sequelize");
-const { Stock, Book, Rent, Sms, SmsBulk, User } = require("../database/models");
+const {
+	Stock,
+	Book,
+	Rent,
+	Sms,
+	SmsBulk,
+	User,
+	Location,
+} = require("../database/models");
 const { MAIN_GROUP_CHAT_ID, MAIN_BOT_USERNAME } = require("../config");
 const Notifications = require("./Notifications");
 const StatServices = require("./StatServices");
@@ -75,11 +83,8 @@ function makeContent(rents) {
 
 const Crons = {
 	groupNotifications: {
-		send(text) {
-			return Notifications.sendMessageFromTelegramBot(
-				MAIN_GROUP_CHAT_ID,
-				text
-			);
+		send(text, chatId = MAIN_GROUP_CHAT_ID) {
+			return Notifications.sendMessageFromTelegramBot(chatId, text);
 		},
 		makeText(rents, hour) {
 			const preHeader =
@@ -93,7 +98,37 @@ const Crons = {
 
 			return header + content + footer;
 		},
-		async job(hour = 1) {
+		/**
+		 * Telegram id si kiritilgan kutubxonalarni topib, faqat o'shalar uchun
+		 * kunlik hisobot tuzadi va har birining o'z chatiga yuboradi.
+		 * Telegram id yo'q kutubxonaga umuman statistika tuzilmaydi.
+		 */
+		async dailyJobForLibrariesWithTelegramChat(hour = 13) {
+			try {
+				const locations = await Location.findAll({
+					attributes: ["id", "name", "telegramChatId"],
+					where: {
+						telegramChatId: {
+							[Op.not]: null,
+							[Op.ne]: "",
+						},
+					},
+					raw: true,
+				});
+
+				if (!locations.length) return;
+
+				for (const location of locations) {
+					await this.job(hour, {
+						locationId: location.id,
+						chatId: location.telegramChatId,
+					});
+				}
+			} catch (error) {
+				console.error(error);
+			}
+		},
+		async job(hour = 1, { locationId = 1, chatId = MAIN_GROUP_CHAT_ID } = {}) {
 			try {
 				const date = new Date();
 
@@ -125,7 +160,7 @@ const Crons = {
 						model: Stock,
 						as: "stock",
 						attributes: ["id", "locationId"],
-						where: { locationId: 1 },
+						where: { locationId: locationId },
 						paranoid: false,
 						include: {
 							as: "book",
@@ -138,7 +173,7 @@ const Crons = {
 
 				if (!rents.length) return;
 
-				await this.send(this.makeText(rents, hour));
+				await this.send(this.makeText(rents, hour), chatId);
 			} catch (error) {
 				console.error(error);
 			}
@@ -156,7 +191,7 @@ const Crons = {
 		startSendingRentLeaseAndReturnInfoEveryDaylyCron() {
 			const job = new CronJob(
 				"0 0 19 * * *",
-				() => this.job(13),
+				() => this.dailyJobForLibrariesWithTelegramChat(13),
 				null,
 				true,
 				"Asia/Tashkent"
