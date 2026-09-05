@@ -24,6 +24,9 @@ const CronJob = require("cron").CronJob;
 const fs = require("fs").promises;
 const path = require("path");
 
+// Mehr kutubxonasi (asosiy kutubxona) locationId si
+const MEHR_LOCATION_ID = 1;
+
 // Fayl bilan ishlash uchun utility funksiyalar SmsGatewayService ga ko'chirildi
 
 function getStatusEmoji(rent) {
@@ -86,13 +89,17 @@ const Crons = {
 		send(text, chatId = MAIN_GROUP_CHAT_ID) {
 			return Notifications.sendMessageFromTelegramBot(chatId, text);
 		},
-		makeText(rents, hour) {
+		makeText(rents, hour, locationId = MEHR_LOCATION_ID) {
 			const preHeader =
 				hour > 9
 					? `Bugun olingan va berilgan kitoblar`
 					: `Olingan va berilgan kitoblar\nOxirgi ${hour} soat ichida`;
 			const header = `<b>${preHeader}</b>\n<b>✳️ -> Kitob o’qib qaytarildi\n📖 -> Kitob o’qish uchun topshirildi\n\n***\n\n</b>`;
-			const footer = `\n\n<b>Kitoblar ro’yxatini quyidagi bot orqali ko’rish mumkin\n👉 ${MAIN_BOT_USERNAME}\nSayt: mehrkutubxonasi.uz</b>`;
+			// Bot va sayt havolasi faqat Mehr kutubxonasiga tegishli
+			const footer =
+				locationId === MEHR_LOCATION_ID
+					? `\n\n<b>Kitoblar ro’yxatini quyidagi bot orqali ko’rish mumkin\n👉 ${MAIN_BOT_USERNAME}\nSayt: mehrkutubxonasi.uz</b>`
+					: "";
 
 			const content = makeContent(rents);
 
@@ -128,7 +135,10 @@ const Crons = {
 				console.error(error);
 			}
 		},
-		async job(hour = 1, { locationId = 1, chatId = MAIN_GROUP_CHAT_ID } = {}) {
+		async job(
+			hour = 1,
+			{ locationId = MEHR_LOCATION_ID, chatId = MAIN_GROUP_CHAT_ID } = {}
+		) {
 			try {
 				const date = new Date();
 
@@ -173,7 +183,7 @@ const Crons = {
 
 				if (!rents.length) return;
 
-				await this.send(this.makeText(rents, hour), chatId);
+				await this.send(this.makeText(rents, hour, locationId), chatId);
 			} catch (error) {
 				console.error(error);
 			}
