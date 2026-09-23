@@ -1,6 +1,6 @@
 const { Sequelize, Op } = require("sequelize");
 const { getListOptions } = require("../api/middlewares/utils");
-const { User, Address } = require("../database/models");
+const { User, Address, Region, Town } = require("../database/models");
 const Verification = require("../services/Verification");
 const HttpError = require("../utils/HttpError");
 const { upperCaseAndClearOtherChars } = require("../utils/string");
@@ -39,13 +39,55 @@ function clearPhoneNumber(number) {
 	return number.replace(/ /g, "").replace("+998", "");
 }
 
-async function addressReference(user) {
-	if (user.address) {
-		const [address] = await Address.upsert(user.address, {
-			returning: true,
-		});
+function parseId(value) {
+	if (value === null || value === undefined || value === "") return null;
+	const id = parseInt(value);
+	return Number.isNaN(id) ? null : id;
+}
 
-		user.addressId = address.id;
+async function addressReference(user, existingAddressId) {
+	if (!user.address) {
+		delete user.address;
+		return;
+	}
+
+	const address = { ...user.address };
+	delete address.id;
+	delete address.locationId;
+	delete address.createdAt;
+	delete address.updatedAt;
+	delete user.address;
+
+	if (address.regionId !== undefined) {
+		address.regionId = parseId(address.regionId);
+		address.region = null;
+		if (address.regionId) {
+			const region = await Region.findByPk(address.regionId, {
+				attributes: ["id", "name"],
+			});
+			if (!region) throw HttpError(400, "Viloyat topilmadi");
+			address.region = region.name;
+		}
+	}
+
+	if (address.townId !== undefined) {
+		address.townId = parseId(address.townId);
+		address.town = null;
+		if (address.townId) {
+			const town = await Town.findByPk(address.townId, {
+				attributes: ["id", "name"],
+			});
+			if (!town) throw HttpError(400, "Tuman topilmadi");
+			address.town = town.name;
+		}
+	}
+
+	if (existingAddressId) {
+		await Address.update(address, { where: { id: existingAddressId } });
+		user.addressId = existingAddressId;
+	} else {
+		const created = await Address.create(address);
+		user.addressId = created.id;
 	}
 }
 
@@ -146,11 +188,14 @@ const UserController = {
 								as: "address",
 								model: Address,
 								attributes: [
+									"id",
 									"addressLine",
 									"countryCode",
 									"createdAt",
 									"region",
 									"town",
+									"regionId",
+									"townId",
 									"latitude",
 									"longitude",
 								],
@@ -217,7 +262,19 @@ const UserController = {
 				}
 			}
 
-			await addressReference(user);
+			if (user.address) {
+				const existing = await User.findByPk(req.params.id, {
+					attributes: ["id", "addressId"],
+				});
+
+				if (!existing)
+					return res.json({ message: "Not found" }).status(404);
+
+				await addressReference(user, existing.addressId);
+			} else {
+				delete user.address;
+			}
+			delete user.id;
 
 			const result = await User.update(user, {
 				where: { id: req.params.id },

@@ -9,7 +9,6 @@ const Address = sequelize.define("address", {
 	},
 	region: {
 		type: DataTypes.STRING,
-		allowNull: false,
 	},
 	town: {
 		type: DataTypes.STRING,

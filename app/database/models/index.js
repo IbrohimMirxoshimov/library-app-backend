@@ -34,6 +34,12 @@ db.Region.hasMany(db.Town);
 db.User.belongsTo(db.Address);
 db.Address.hasOne(db.User);
 
+db.Region.hasMany(db.Address, { foreignKey: "regionId" });
+db.Address.belongsTo(db.Region, { foreignKey: "regionId", as: "regionRef" });
+
+db.Town.hasMany(db.Address, { foreignKey: "townId" });
+db.Address.belongsTo(db.Town, { foreignKey: "townId", as: "townRef" });
+
 db.Location.hasOne(db.Address);
 db.Address.belongsTo(db.Location);
 
