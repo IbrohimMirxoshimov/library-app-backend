@@ -309,9 +309,13 @@ const RentController = {
 						{
 							model: User,
 							as: "user",
-							attributes: {
-								include: ["firstName", "lastName"],
-							},
+							// ro'yxatda faqat kerakli maydonlar (password, passport chiqmasin)
+							attributes: [
+								"id",
+								"firstName",
+								"lastName",
+								"locationId",
+							],
 							paranoid: false,
 						},
 					]
