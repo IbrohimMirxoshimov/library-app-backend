@@ -19,6 +19,22 @@ const BLOCKING_LATE_TIME_FROM_LEASED_IN_MS =
 const BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS = 10;
 const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS =
 	BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS * 24 * 60 * 60 * 1000;
+
+// Ijaralar ro'yxatidagi qidiruv satri:
+// "i{id}c{customId}u{userId}.{firstName}{lastName}p{phone}p{extraPhone}p{extraPhone2}s{stockId}b{bookId}."
+// Oldingi concat(...) bilan aynan bir xil satr (NULL -> ""), lekin concat() (variadic "any")
+// o'rniga "||" + coalesce ishlatilgani uchun har qatorda ancha arzon hisoblanadi.
+const RENT_SEARCH_STRING_SQL = `('i' || "rent"."id"
+	|| 'c' || coalesce("rent"."customId"::text, '')
+	|| 'u' || coalesce("user"."id"::text, '')
+	|| '.' || coalesce("user"."firstName", '') || coalesce("user"."lastName", '')
+	|| 'p' || coalesce("user"."phone", '')
+	|| 'p' || coalesce("user"."extraPhone", '')
+	|| 'p' || coalesce("user"."extraPhone2", '')
+	|| 's' || coalesce("rent"."stockId"::text, '')
+	|| 'b' || coalesce("stock"."bookId"::text, '')
+	|| '.')`;
+
 async function isRequiredBook(book_id) {
 	return StatServices.getFewBooks({ cached: true }).then((books) =>
 		books.some((book) => book.bookId === book_id)
@@ -264,47 +280,16 @@ const RentController = {
 					req.query,
 					{
 						search: ({ q }) => {
+							// q da harf (yoki non-ASCII belgi) bo'lmasa (id, telefon raqam)
+							// ILIKE va LIKE natijasi bir xil, LIKE esa har qatorda lower() chaqirmaydi
+							const caseInsensitive = /[^\x00-\x7f]|[a-z]/i.test(
+								String(q)
+							);
+
 							return Sequelize.where(
-								Sequelize.fn(
-									"concat",
-									"i",
-									Sequelize.cast(
-										Sequelize.col("rent.id"),
-										"varchar"
-									),
-									"c",
-									Sequelize.cast(
-										Sequelize.col("customId"),
-										"varchar"
-									),
-									"u",
-									Sequelize.cast(
-										Sequelize.col("user.id"),
-										"varchar"
-									),
-									".",
-									Sequelize.col("user.firstName"),
-									Sequelize.col("user.lastName"),
-									"p",
-									Sequelize.col("user.phone"),
-									"p",
-									Sequelize.col("user.extraPhone"),
-									"p",
-									Sequelize.col("user.extraPhone2"),
-									"s",
-									Sequelize.cast(
-										Sequelize.col("stockId"),
-										"varchar"
-									),
-									"b",
-									Sequelize.cast(
-										Sequelize.col("stock.bookId"),
-										"varchar"
-									),
-									"."
-								),
+								Sequelize.literal(RENT_SEARCH_STRING_SQL),
 								{
-									[Op.iLike]: `%${q}%`,
+									[caseInsensitive ? Op.iLike : Op.like]: `%${q}%`,
 								}
 							);
 						},
