@@ -16,6 +16,11 @@ function getListOptions(
 	getInclude,
 	customWhere
 ) {
+	// qs turns arrays with more than 20 items into objects ({ "0": .., "21": .. })
+	if (id && !Array.isArray(id)) {
+		id = typeof id === "object" ? Object.values(id) : String(id).split(",");
+	}
+
 	const pagination = id?.length
 		? {}
 		: {
