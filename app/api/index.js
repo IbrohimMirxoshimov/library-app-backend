@@ -17,6 +17,7 @@ const sms = require("./routes/sms");
 const towns = require("./routes/towns");
 const stats = require("./routes/stats");
 const gateway = require("./routes/gateway");
+const files = require("./routes/files");
 
 module.exports = () => {
 	const main = Router();
@@ -39,6 +40,7 @@ module.exports = () => {
 	towns(main);
 	stats(main);
 	gateway(main);
+	files(main);
 
 	return main;
 };
