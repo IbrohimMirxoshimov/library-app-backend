@@ -272,13 +272,29 @@ async function checkToAdd(req) {
 	return stock;
 }
 
+// Qidiruvda idx_rents_updated_at ishlatilmasin: moslar kam bo'lsa Postgres index bo'yicha
+// butun jadvalni aylanib chiqadi (u16. -> ~320ms). "+ interval '0'" natijani o'zgartirmaydi,
+// lekin index'ni o'chiradi - avval qidiruv, keyin topilganlarni sort qiladi.
+function getRentSearchOrder({ q, sort = "updatedAt", order = "DESC" }) {
+	if (!q || sort !== "updatedAt") return undefined;
+
+	return [
+		[
+			Sequelize.literal(`"rent"."updatedAt" + interval '0'`),
+			String(order).toUpperCase() === "ASC" ? "ASC" : "DESC",
+		],
+	];
+}
+
 const RentController = {
 	getList: () => async (req, res, next) => {
 		try {
+			const searchOrder = getRentSearchOrder(req.query);
 			let { count, rows } = await Rent.findAndCountAll(
 				getListOptions(
 					req.query,
 					{
+						options: searchOrder && { order: searchOrder },
 						search: ({ q }) => {
 							// q da harf (yoki non-ASCII belgi) bo'lmasa (id, telefon raqam)
 							// ILIKE va LIKE natijasi bir xil, LIKE esa har qatorda lower() chaqirmaydi
