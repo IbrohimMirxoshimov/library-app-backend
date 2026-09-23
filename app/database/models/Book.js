@@ -14,6 +14,10 @@ const Book = sequelize.define(
 		},
 		image: {
 			type: DataTypes.STRING,
+			set(value) {
+				// front sends "" when the image is cleared
+				this.setDataValue("image", value?.trim() || null);
+			},
 		},
 		isbn: {
 			type: DataTypes.STRING,
