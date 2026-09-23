@@ -567,6 +567,60 @@ const RentController = {
 			next(e);
 		}
 	},
+	// kitobxonning hozir qo'lidagi kitoblari (ijara qo'shishda ko'rsatish uchun)
+	activeByUser: () => async (req, res, next) => {
+		try {
+			const rents = await Rent.findAll({
+				attributes: [
+					"id",
+					"stockId",
+					"leasedAt",
+					"returningDate",
+					"rejected",
+				],
+				where: {
+					userId: req.query.userId,
+					returnedAt: {
+						[Op.is]: null,
+					},
+				},
+				include: {
+					model: Stock,
+					as: "stock",
+					attributes: ["id"],
+					where: req.user.owner
+						? undefined
+						: {
+								locationId: req.user.libraryId,
+						  },
+					paranoid: false,
+					include: {
+						model: Book,
+						as: "book",
+						attributes: ["id", "name"],
+						paranoid: false,
+					},
+				},
+				order: [["returningDate", "ASC"]],
+			});
+
+			const now = Date.now();
+
+			return res.status(200).json(
+				rents.map((rent) => ({
+					id: rent.id,
+					stockId: rent.stockId,
+					leasedAt: rent.leasedAt,
+					returningDate: rent.returningDate,
+					rejected: rent.rejected,
+					expired: new Date(rent.returningDate).getTime() < now,
+					book: rent.stock.book,
+				}))
+			);
+		} catch (e) {
+			next(e);
+		}
+	},
 	getOne: () => async (req, res, next) => {
 		try {
 			let result = await Rent.findByPk(req.params.id, {

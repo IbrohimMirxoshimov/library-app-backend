@@ -20,6 +20,15 @@ module.exports = (app) => {
 
 	route.get("/", RentController.getList());
 	route.get("/report", RentController.report());
+	route.get(
+		"/active",
+		celebrate({
+			query: Joi.object({
+				userId: Joi.number().integer().required(),
+			}),
+		}),
+		RentController.activeByUser()
+	);
 	route.get("/:id", RentController.getOne());
 	route.post(
 		"/check-to-add",
