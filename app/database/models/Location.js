@@ -23,6 +23,12 @@ const Location = sequelize.define(
 			type: DataTypes.STRING,
 			allowNull: true,
 		},
+		// zarur kitob bilan boshqa kitob berilmasligi tekshiruvi
+		requiredBookGuard: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false,
+		},
 	},
 	{
 		paranoid: true,

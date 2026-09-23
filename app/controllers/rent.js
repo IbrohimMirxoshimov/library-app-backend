@@ -3,7 +3,7 @@ const { getListOptions } = require("../api/middlewares/utils");
 const { DEV_ID } = require("../config");
 const UserStatus = require("../constants/UserStatus");
 const db = require("../database/models");
-const { Rent, Stock, User, Book, Comment } = db;
+const { Rent, Stock, User, Book, Comment, Location } = db;
 const { sendMessageFromTelegramBot } = require("../services/Notifications");
 const { report } = require("../services/RentServices");
 const StatServices = require("../services/StatServices");
@@ -23,6 +23,15 @@ async function isRequiredBook(book_id) {
 	return StatServices.getFewBooks({ cached: true }).then((books) =>
 		books.some((book) => book.bookId === book_id)
 	);
+}
+
+async function isRequiredBookGuardEnabled(location_id) {
+	return Location.findOne({
+		where: {
+			id: location_id,
+			requiredBookGuard: true,
+		},
+	}).then(Boolean);
 }
 
 function canGetMoreRents(active_rents_count, leased_rents) {
@@ -84,13 +93,17 @@ async function canGetMoreRentStrategy(stock, userId) {
 
 	if (active_rents_count === 0) return;
 
+	const required_book_guard = await isRequiredBookGuardEnabled(
+		stock.locationId
+	);
+
 	// shu joyda o'zgartirish kiritamiz
 	// zarur kitob bor odam umuman kitob ololmaydi. Yoki biror kitob olgan odam zarur kitob ololmaydi.
 	// Hullas zarur kitob olgan odam umuman boshqa kitob ololmaydi.
 	// Ballik tizimga o'tguncha yoki boshqa yechim topilgunicha
 
 	// agar kitobxonda faol ijara mavjud bo'lsa zarur kitob berilmaydi
-	if (await isRequiredBook(stock.bookId)) {
+	if (required_book_guard && (await isRequiredBook(stock.bookId))) {
 		if ((await isUserVerified(userId)) && active_rents_count < 5) return;
 		throw HttpError(
 			400,
@@ -126,7 +139,10 @@ async function canGetMoreRentStrategy(stock, userId) {
 	// avval bironta zarur kitob olgan bo'lsa boshqa kitob berilmaydi
 	for (const active_rent of active_rents) {
 		// if required
-		if (await isRequiredBook(active_rent.stock.bookId)) {
+		if (
+			required_book_guard &&
+			(await isRequiredBook(active_rent.stock.bookId))
+		) {
 			if ((await isUserVerified(userId)) && active_rents_count < 5)
 				return;
 			throw HttpError(
