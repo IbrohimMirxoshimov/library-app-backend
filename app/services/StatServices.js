@@ -7,12 +7,225 @@ const {
 	getOneWeekBackDate,
 	getOneDayBackDate,
 } = require("../utils/date");
-const { Op } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
 const User = require("../database/models/User");
 const Stock = require("../database/models/Stock");
 const { production } = require("../config");
 
+const STATS_TZ = "Asia/Tashkent";
+const SNAPSHOT_TTL = 10 * 60 * 1000;
+const RANGE_TTL = 5 * 60 * 1000;
+const PAST_RANGE_TTL = 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 300;
+
+const memoryCache = new Map();
+
+async function cached(key, ttl, load) {
+	const hit = memoryCache.get(key);
+	if (hit && hit.expiresAt > Date.now()) return hit.value;
+
+	const value = await load();
+	if (memoryCache.size >= MAX_CACHE_ENTRIES) memoryCache.clear();
+	memoryCache.set(key, { value, expiresAt: Date.now() + ttl });
+	return value;
+}
+
+function query(sql, replacements) {
+	return sequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+}
+
+// Chart bucket size: keeps the series at most ~60 points for any range
+function getBucketUnit(from, to) {
+	const days = (to - from) / (24 * 60 * 60 * 1000);
+	if (days <= 62) return "day";
+	if (days <= 366) return "week";
+	return "month";
+}
+
 const StatServices = {
+	/**
+	 * Current state of the library, independent of any date range.
+	 * @param {number} locationId
+	 */
+	getSnapshot(locationId) {
+		return cached(`snapshot:${locationId}`, SNAPSHOT_TTL, async () => {
+			const params = { locationId };
+			const [users, [stocks], [rents], few_books] = await Promise.all([
+				query(
+					`SELECT
+						count(*) AS readers,
+						count(*) FILTER (WHERE gender = 'male') AS male,
+						count(*) FILTER (WHERE gender = 'female') AS female
+					FROM users
+					WHERE phone IS NOT NULL AND "locationId" = :locationId`,
+					params
+				),
+				query(
+					`SELECT count(*) AS count FROM stocks
+					WHERE "locationId" = :locationId AND "deletedAt" IS NULL`,
+					params
+				),
+				query(
+					`SELECT
+						count(*) AS reading,
+						count(*) FILTER (WHERE r."returningDate" < now()) AS expired
+					FROM rents r
+					INNER JOIN stocks s ON s.id = r."stockId"
+					WHERE s."locationId" = :locationId
+						AND r."returnedAt" IS NULL
+						AND r."deletedAt" IS NULL
+						AND r.rejected = false`,
+					params
+				),
+				this.getFewBooks({ locationId }),
+			]);
+
+			return {
+				readers_count: Number(users[0].readers),
+				gender: {
+					male: Number(users[0].male),
+					female: Number(users[0].female),
+				},
+				books_count: Number(stocks.count),
+				reading_books_count: Number(rents.reading),
+				expired_leases: Number(rents.expired),
+				few_books: few_books
+					.map((b) => ({
+						bookId: b.bookId,
+						name: b.name,
+						total: Number(b.total),
+						busies: Number(b.busies),
+					}))
+					.sort((a, b) => b.total - a.total),
+				generated_at: new Date(),
+			};
+		});
+	},
+
+	/**
+	 * Stats for the half-open interval [from, to).
+	 * @param {{ locationId: number, from: Date, to: Date }} filter
+	 */
+	getRangeStats({ locationId, from, to }) {
+		const ttl = to < Date.now() ? PAST_RANGE_TTL : RANGE_TTL;
+		const key = `range:${locationId}:${from.getTime()}:${to.getTime()}`;
+
+		return cached(key, ttl, async () => {
+			const unit = getBucketUnit(from, to);
+			const params = { locationId, from, to, unit, tz: STATS_TZ };
+
+			const [[leased], [returned], [newUsers], series, top_books, top_readers] =
+				await Promise.all([
+					query(
+						`SELECT
+							count(*) AS count,
+							count(DISTINCT (r."createdAt" AT TIME ZONE :tz)::date) AS active_days
+						FROM rents r
+						INNER JOIN stocks s ON s.id = r."stockId"
+						WHERE s."locationId" = :locationId
+							AND r."deletedAt" IS NULL AND r.rejected = false
+							AND r."createdAt" >= :from AND r."createdAt" < :to`,
+						params
+					),
+					query(
+						`SELECT count(*) AS count
+						FROM rents r
+						INNER JOIN stocks s ON s.id = r."stockId"
+						WHERE s."locationId" = :locationId
+							AND r."deletedAt" IS NULL AND r.rejected = false
+							AND r."returnedAt" >= :from AND r."returnedAt" < :to`,
+						params
+					),
+					query(
+						`SELECT count(*) AS count FROM users
+						WHERE "locationId" = :locationId
+							AND phone IS NOT NULL AND "passportId" IS NOT NULL
+							AND "createdAt" >= :from AND "createdAt" < :to`,
+						params
+					),
+					query(
+						`SELECT to_char(bucket, 'YYYY-MM-DD') AS date,
+							sum(leased)::int AS leased, sum(returned)::int AS returned
+						FROM (
+							SELECT date_trunc(:unit, r."createdAt" AT TIME ZONE :tz) AS bucket,
+								1 AS leased, 0 AS returned
+							FROM rents r
+							INNER JOIN stocks s ON s.id = r."stockId"
+							WHERE s."locationId" = :locationId
+								AND r."deletedAt" IS NULL AND r.rejected = false
+								AND r."createdAt" >= :from AND r."createdAt" < :to
+							UNION ALL
+							SELECT date_trunc(:unit, r."returnedAt" AT TIME ZONE :tz),
+								0, 1
+							FROM rents r
+							INNER JOIN stocks s ON s.id = r."stockId"
+							WHERE s."locationId" = :locationId
+								AND r."deletedAt" IS NULL AND r.rejected = false
+								AND r."returnedAt" >= :from AND r."returnedAt" < :to
+						) t
+						GROUP BY bucket
+						ORDER BY bucket`,
+						params
+					),
+					query(
+						`SELECT b.id, b.name, t.count::int AS count
+						FROM (
+							SELECT s."bookId", count(*) AS count
+							FROM rents r
+							INNER JOIN stocks s ON s.id = r."stockId"
+							WHERE s."locationId" = :locationId
+								AND r."deletedAt" IS NULL AND r.rejected = false
+								AND r."createdAt" >= :from AND r."createdAt" < :to
+							GROUP BY s."bookId"
+							ORDER BY count DESC
+							LIMIT 50
+						) t
+						INNER JOIN books b ON b.id = t."bookId"
+						ORDER BY t.count DESC`,
+						params
+					),
+					// Rents shorter than 12 hours are not counted as actually read
+					query(
+						`SELECT u.id AS user_id, u."lastName", u.gender, t.count::int AS count
+						FROM (
+							SELECT r."userId", count(*) AS count
+							FROM rents r
+							INNER JOIN stocks s ON s.id = r."stockId"
+							WHERE s."locationId" = :locationId
+								AND r."deletedAt" IS NULL AND r.rejected = false
+								AND r."returnedAt" >= :from AND r."returnedAt" < :to
+								AND r."returnedAt" - r."leasedAt" > interval '12 hours'
+							GROUP BY r."userId"
+							ORDER BY count DESC
+							LIMIT 50
+						) t
+						INNER JOIN users u ON u.id = t."userId"
+						ORDER BY t.count DESC`,
+						params
+					),
+				]);
+
+			const leasedCount = Number(leased.count);
+			const activeDays = Number(leased.active_days);
+
+			return {
+				from,
+				to,
+				unit,
+				leased_count: leasedCount,
+				returned_count: Number(returned.count),
+				new_users_count: Number(newUsers.count),
+				active_days: activeDays,
+				daily_average: activeDays
+					? Math.round((leasedCount / activeDays) * 10) / 10
+					: 0,
+				series,
+				top_books,
+				top_readers,
+			};
+		});
+	},
+
 	async getTopReadingBooks(
 		locationId = 1,
 		size = 10,
