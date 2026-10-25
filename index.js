@@ -1,3 +1,6 @@
+// server IPv6 route to api.telegram.org is flaky, prefer IPv4
+require("dns").setDefaultResultOrder("ipv4first");
+
 const config = require("./app/config");
 const express = require("express");
 const Logger = require("./app/loaders/logger");

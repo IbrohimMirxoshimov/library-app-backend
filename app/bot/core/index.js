@@ -71,9 +71,15 @@ async function loadBot() {
 	bot.on("text", mainSend);
 
 	// launch main bot
-	bot.launch(() => {
-		bot.telegram.sendMessage(DEV_ID, "bot started").catch(console.error);
-	});
+	bot
+		.launch(() => {
+			bot.telegram.sendMessage(DEV_ID, "bot started").catch(console.error);
+		})
+		.catch((e) => {
+			// without polling the process is useless, let pm2 restart it
+			console.error("Bot launch failed", e);
+			process.exit(1);
+		});
 }
 
 module.exports = loadBot;
