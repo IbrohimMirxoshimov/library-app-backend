@@ -47,6 +47,7 @@ async function updateLocations() {
 		where: {
 			active: true,
 		},
+		order: [["id", "ASC"]],
 		nest: true,
 	});
 
