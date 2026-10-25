@@ -4,26 +4,38 @@ const { sendGettingRentInfo } = require("../middlewares/others");
 const { backMarkup } = require("../utils/keyboards");
 const { MAIN_CHANNEL_CHAT_ID } = require("../../config");
 const StatServices = require("../../services/StatServices");
+const { MAIN_LOCATION_ID } = require("../../constants/mix");
+const { getUserLocation } = require("../cache");
+const { escapeHtml } = require("../utils/helpers");
 
 async function fewBooksMiddleware(ctx) {
-	return StatServices.getFewBooks({ locationId: 1, cached: true }).then(
-		(few_books) =>
-			ctx.reply(
-				`📚 <b>Eng zarur va yetishmayotgan kitoblar</b>\n\n${few_books
-					.map((book, i) => i + 1 + ") " + book.name)
-					.join("\n")
-					.slice(0, 3000)
-					.split("\n")
-					.slice(0, -1)
-					.join(
-						"\n"
-					)} \n\n<a href="https://www.mehrkutubxonasi.uz/zarur">📚 To'liq ro'yxat</a>\n\n<b>Siz ham kutubxonaga hissa qo'shib minglab kitobxonlar ilm olishiga sababchi bo'lishingiz mumkin\n@${
-					ctx.botInfo.username
-				}</b>`,
-				{
-					parse_mode: "HTML",
-				}
-			)
+	const location = getUserLocation(ctx.session.user);
+	const few_books = await StatServices.getFewBooks({
+		locationId: location.id,
+		cached: true,
+	});
+
+	let list = "";
+	for (const [i, book] of few_books.entries()) {
+		const line = `${i + 1}) ${escapeHtml(book.name)}\n`;
+		if (list.length + line.length > 3000) break;
+		list += line;
+	}
+
+	const fullListLink =
+		location.id === MAIN_LOCATION_ID
+			? `<a href="https://www.mehrkutubxonasi.uz/zarur">📚 To'liq ro'yxat</a>\n\n`
+			: "";
+
+	return ctx.reply(
+		`📚 <b>Eng zarur va yetishmayotgan kitoblar</b>\n🏛 <b>${escapeHtml(
+			`${location.name} - ${location.region.name}`
+		)}</b>\n\n${list || "Hozircha ro'yxat bo'sh\n"}\n${fullListLink}<b>Siz ham kutubxonaga hissa qo'shib minglab kitobxonlar ilm olishiga sababchi bo'lishingiz mumkin\n@${
+			ctx.botInfo.username
+		}</b>`,
+		{
+			parse_mode: "HTML",
+		}
 	);
 }
 

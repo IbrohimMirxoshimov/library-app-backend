@@ -17,6 +17,8 @@ const SmsStatusEnum = {
 	error: "error",
 };
 const GATEWAY_SMS_DAILY_LIMIT = 220;
+// Chorsu, the original library with its own channel posts
+const MAIN_LOCATION_ID = 1;
 
 module.exports = {
 	ESKIZ_WEBHOOK_ROUTE: "/eskiz",
@@ -27,4 +29,5 @@ module.exports = {
 	SmsProviderType,
 	SmsStatusEnum,
 	GATEWAY_SMS_DAILY_LIMIT,
+	MAIN_LOCATION_ID,
 };

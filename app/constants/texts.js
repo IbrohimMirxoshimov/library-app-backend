@@ -36,8 +36,7 @@ const texts = {
 		update: "update",
 	},
 	stat: {
-		general:
-			"<b>📊 Kutubxona statistikasi\n\n 04.20.2021 sanadan boshlab hozirgi kungacha</b>",
+		general: "<b>📊 Kutubxona statistikasi</b>",
 		top_librarians:
 			"<b>🧑‍🚀 Top 10 kitobxon</b>\n<i>Eng ko'p kitob o'qiganlik bo'yicha</i>",
 		males: "<b>👨‍🏫 Erkaklar: </b>",
@@ -61,9 +60,15 @@ const texts = {
 			"<b>🧑‍🚀 Oxirgi 24 soat yangi kitobxonlar: </b>",
 		top_books:
 			"<b>📚 Top 20 kitoblar</b>\n<i>Eng ko'p o'qilganlik bo'yicha</i>",
-		warning:
-			"⚠️ <b>Eslatma</b>\nBu ma'lumotlar Toshkent shahri Chorsu yaqinidagi kutubxonaga tegishli. (hozircha)",
 		footer: `<b>${MAIN_BOT_USERNAME}</b>`,
+	},
+	rent_info: {
+		title: "✳️ <b>Kitob olmoqchi bo'lsangiz</b>",
+		body: "Agar siz birinchi marta kitob olmoqchi bo'lsangiz ro'yxatdan o'tishingiz kerak bo'ladi. Buning uchun kutubxonaga pasportingizni olib boring.\n\nKutubxonaga borishdan avval kutubxonachiga quyidagi ma'lumotlarni yozib qoldiring:\n— ism, familiya;\n— yashash manzilingiz (tuman, ko'cha, uy raqami);\n— telefon raqamingiz;\n— olmoqchi bo'lgan kitobingiz nomi.",
+		address: "📍 <b>Manzil:</b> ",
+		contact: "👤 <b>Kutubxonachi bilan bog'lanish:</b> ",
+		notes:
+			"⚠️ <b>Eslatma</b>\n— Kitoblar ro'yxatini, band yoki band emasligini <b>🔎 Kitob qidirish</b> tugmasi orqali bilib olishingiz mumkin.\n— Kitob olish mutlaqo bepul.",
 	},
 	need_reg: `Siz botdan ro'yxatdan o'tmagansiz. Botga kiring va startni bosing\n${MAIN_BOT_USERNAME}`,
 	warn_change_library:

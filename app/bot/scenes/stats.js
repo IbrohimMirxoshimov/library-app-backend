@@ -2,12 +2,15 @@ const { Scenes } = require("telegraf");
 const texts = require("../../constants/texts");
 const StatServices = require("../../services/StatServices");
 const { backMarkup } = require("../utils/keyboards");
+const { getUserLocation } = require("../cache");
+const { escapeHtml } = require("../utils/helpers");
 const { BaseScene } = Scenes;
 
 const stats = new BaseScene("stats");
 
 stats.enter(async (ctx) => {
-	const stats = await StatServices.getStats();
+	const location = getUserLocation(ctx.session.user);
+	const stats = await StatServices.getStats(location.id);
 
 	// const top_librarians_text = `${
 	// 	texts.stat.top_librarians
@@ -20,7 +23,9 @@ stats.enter(async (ctx) => {
 	// 	)
 	// 	.join("\n")}\n\n`;
 
-	const text = `${texts.stat.general}\n\n${
+	const text = `${texts.stat.general}\n🏛 <b>${escapeHtml(
+		`${location.name} - ${location.region.name}`
+	)}</b>\n\n${
 		texts.stat.books_count + stats.books_count
 	} ta\n${texts.stat.librarians_count + stats.librarians_count} ta\n${
 		texts.stat.rents_count + stats.rents_count
@@ -43,7 +48,7 @@ stats.enter(async (ctx) => {
 	} ta\n\n${texts.stat.top_books}\n${stats.top_books
 		.slice(0, 20)
 		.map((book, i) => `<b>${i + 1}.</b> ${book.name} – ${book.count} martta`)
-		.join("\n")}\n\n${texts.stat.warning}\n\n${texts.stat.footer}`;
+		.join("\n")}\n\n${texts.stat.footer}`;
 
 	if (ctx.callbackQuery) {
 		ctx.answerCbQuery();

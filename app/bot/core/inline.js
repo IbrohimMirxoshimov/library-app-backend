@@ -3,7 +3,7 @@ const { NO_IMAGE_URL } = require("../../constants/mix");
 const texts = require("../../constants/texts");
 const { getBookStatuses } = require("../../services/app/BookServices");
 const { cryllic2latin } = require("../../utils/cryllic2latin");
-const { getLocation } = require("../cache");
+const { getLocation, getUserLocationId } = require("../cache");
 const { getBooksWithStocks, getBook } = require("../fetch");
 const { getBookMarkup, searchAndRentMarkup } = require("../utils/keyboards");
 const {
@@ -70,11 +70,6 @@ function getBookInfo(stocks) {
 	};
 }
 
-const defaultLocation = 1;
-
-function getUserLocation(user) {
-	return user.tempLocationId || user.locationId || defaultLocation;
-}
 function getTitle(book) {
 	if (book.author) {
 		return book.name + " - " + book.author.name;
@@ -106,7 +101,7 @@ function inlineQuery(bot) {
 				name: cryllic2latin(query),
 				size: 15,
 				page: pageIndex,
-				locationId: getUserLocation(ctx.session.user),
+				locationId: getUserLocationId(ctx.session.user),
 			});
 
 			// no result
@@ -146,7 +141,7 @@ function inlineQuery(bot) {
 				let [, bookId] = ctx.match;
 				let book = await getBook(
 					parseInt(bookId),
-					getUserLocation(ctx.session.user)
+					getUserLocationId(ctx.session.user)
 				);
 
 				deleteMessageWithCatch(ctx);
@@ -172,7 +167,7 @@ function inlineQuery(bot) {
 				let [, bookId] = ctx.match;
 				let book = await getBook(
 					parseInt(bookId),
-					getUserLocation(ctx.session.user)
+					getUserLocationId(ctx.session.user)
 				);
 
 				if (book) {

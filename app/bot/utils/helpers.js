@@ -68,6 +68,13 @@ Kutubxonaga borishingiz va kitob olishingiz mumkin.
 	);
 }
 
+function escapeHtml(text) {
+	return String(text)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
 function makeBold(text) {
 	return `<b>${text}</b>`;
 }
@@ -86,5 +93,6 @@ module.exports = {
 	getById: getById,
 	successFullRegistration: successFullRegistration,
 	makeBold: makeBold,
+	escapeHtml: escapeHtml,
 	leaveSceneAndSendToMain: leaveSceneAndSendToMain,
 };
