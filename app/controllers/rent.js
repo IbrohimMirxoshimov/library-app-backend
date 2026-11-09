@@ -428,7 +428,8 @@ const RentController = {
 		try {
 			const stock = await checkToAdd(req);
 
-			if (req.body.smsVerification !== false) {
+			// faqat UI'da (ijara sozlamalari) yoqilgan bo'lsa tekshiriladi
+			if (req.body.smsVerification === true) {
 				const phoneVerification = await getPhoneVerification(
 					req.body.userId,
 					stock.locationId
