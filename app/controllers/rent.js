@@ -3,9 +3,10 @@ const { getListOptions } = require("../api/middlewares/utils");
 const { DEV_ID } = require("../config");
 const UserStatus = require("../constants/UserStatus");
 const db = require("../database/models");
-const { Rent, Stock, User, Book, Comment, Location, UserLocation } = db;
+const { Rent, Stock, User, Book, Comment, Location } = db;
 const { sendMessageFromTelegramBot } = require("../services/Notifications");
 const { report } = require("../services/RentServices");
+const { getLink, setLibraryFields } = require("../services/ReaderLibrary");
 const StatServices = require("../services/StatServices");
 const HttpError = require("../utils/HttpError");
 const { searchWhere } = require("../utils/search");
@@ -82,22 +83,12 @@ function canGetMoreRents(active_rents_count, leased_rents) {
 	);
 }
 
-async function isUserVerified(user_id) {
-	return User.findOne({
-		where: {
-			id: user_id,
-			verified: true,
-		},
-	}).then(Boolean);
-}
-
-async function isUserActive(user_id) {
-	return User.findOne({
-		where: {
-			id: user_id,
-			status: UserStatus.active,
-		},
-	}).then(Boolean);
+// verified - kutubxonaga bog'liq
+async function isUserVerified(user_id, location_id) {
+	const link = await getLink(user_id, location_id, {
+		attributes: ["verified"],
+	});
+	return Boolean(link?.verified);
 }
 
 async function canGetMoreRentStrategy(stock, userId) {
@@ -123,7 +114,7 @@ async function canGetMoreRentStrategy(stock, userId) {
 
 	// agar kitobxonda faol ijara mavjud bo'lsa zarur kitob berilmaydi
 	if (required_book_guard && (await isRequiredBook(stock.bookId))) {
-		if ((await isUserVerified(userId)) && active_rents_count < 5) return;
+		if ((await isUserVerified(userId, stock.locationId)) && active_rents_count < 5) return;
 		throw HttpError(
 			400,
 			"Qo'shimcha kitob sifatida berilmaydi. Zarur kitoblar ro'yxatiga kiritilgan!"
@@ -162,7 +153,7 @@ async function canGetMoreRentStrategy(stock, userId) {
 			required_book_guard &&
 			(await isRequiredBook(active_rent.stock.bookId))
 		) {
-			if ((await isUserVerified(userId)) && active_rents_count < 5)
+			if ((await isUserVerified(userId, stock.locationId)) && active_rents_count < 5)
 				return;
 			throw HttpError(
 				400,
@@ -184,7 +175,7 @@ async function canGetMoreRentStrategy(stock, userId) {
 	const leased_rents = all_rents_count - active_rents_count;
 
 	if (!canGetMoreRents(active_rents_count, leased_rents)) {
-		if ((await isUserVerified(userId)) && active_rents_count < 5) return;
+		if ((await isUserVerified(userId, stock.locationId)) && active_rents_count < 5) return;
 		throw HttpError(
 			400,
 			`Berilmaydi. Kitobxonda ${active_rents_count} ta faol ijara mavjud!`
@@ -196,32 +187,33 @@ async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 		throw HttpError(400, "User not found");
 	}
 
-	const [user, linked] = await Promise.all([
-		User.findByPk(userId),
-		UserLocation.count({ where: { userId, locationId: libraryId } }),
+	const [user, link] = await Promise.all([
+		User.findByPk(userId, { attributes: ["id"] }),
+		getLink(userId, libraryId),
 	]);
 
 	if (!user) {
 		throw HttpError(400, "User not found");
 	}
 
-	if (!linked) {
+	if (!link) {
 		throw HttpError(400, "Kitobxon kutubxonangizga ulanmagan");
 	}
 
-	if (user.status === UserStatus.active) {
+	// blok, sabab va balans - shu kutubxonadagi qiymat
+	if (link.status === UserStatus.active) {
 		return true;
 	}
 
-	if (user.status === UserStatus.blocked) {
-		if (user.blockingReason) {
+	if (link.status === UserStatus.blocked) {
+		if (link.blockingReason) {
 			throw HttpError(
 				400,
-				user.blockingReason + `\nKitob ${bookPrice} so'm`
+				link.blockingReason + `\nKitob ${bookPrice} so'm`
 			);
 		}
 
-		if (user.balance >= bookPrice) {
+		if (link.balance >= bookPrice) {
 			return true;
 		}
 
@@ -506,13 +498,11 @@ const RentController = {
 				{ transaction }
 			);
 
-			const customer = await User.findOne({
-				where: {
-					id: rent.userId,
-				},
-				attributes: ["id", "blockingReason"],
+			// blok faqat ijara kutubxonasida qo'yiladi
+			const customer = (await getLink(rent.userId, rent.locationId, {
+				attributes: ["blockingReason"],
 				transaction,
-			});
+			})) || { blockingReason: null };
 
 			const very_long_leased =
 				new Date().getTime() - rent.leasedAt.getTime() >
@@ -534,17 +524,14 @@ const RentController = {
 						`Kelishilgan muddatdan ${BLOCKING_LATE_TIME_FROM_RETURNING_IN_DAYS} kun o'tib ketgan\n`;
 				}
 
-				await User.update(
+				await setLibraryFields(
+					rent.userId,
+					rent.locationId,
 					{
 						status: UserStatus.blocked,
 						blockingReason: customer.blockingReason,
 					},
-					{
-						where: {
-							id: rent.userId,
-						},
-						transaction,
-					}
+					{ transaction }
 				);
 			}
 

@@ -3,6 +3,10 @@ const User = require("../../../database/models/User");
 const AccountServices = require("../../../services/app/AccountServices");
 const isAuth = require("../../middlewares/isAuth");
 const { listResponse } = require("../../middlewares/utils");
+const {
+	applyLibraryFields,
+	LIBRARY_FIELDS,
+} = require("../../../services/ReaderLibrary");
 
 module.exports = (app) => {
 	const route = Router();
@@ -22,6 +26,10 @@ module.exports = (app) => {
 				delete user.tempLocationId;
 				delete user.regionId;
 
+				// blok, balans va h.k. - asosiy kutubxonadagi qiymat
+				await applyLibraryFields([user], null);
+				delete user.otherLibraryBlocks;
+
 				res.json(user).status(200);
 			} catch (e) {
 				next(e);
@@ -37,6 +45,7 @@ module.exports = (app) => {
 				delete req.body.username;
 				delete req.body.libraryId;
 				delete req.body.locationId;
+				for (const key of LIBRARY_FIELDS) delete req.body[key];
 
 				let result = await User.update(req.body, {
 					where: { id: req.user.id },

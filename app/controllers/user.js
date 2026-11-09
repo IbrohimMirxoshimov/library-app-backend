@@ -13,6 +13,13 @@ const Verification = require("../services/Verification");
 const HttpError = require("../utils/HttpError");
 const { searchWhere, searchRankOrder } = require("../utils/search");
 const { upperCaseAndClearOtherChars } = require("../utils/string");
+const UserStatus = require("../constants/UserStatus");
+const {
+	isStaff,
+	takeLibraryFields,
+	setLibraryFields,
+	applyLibraryFields,
+} = require("../services/ReaderLibrary");
 
 const userAttributes = (owner) => {
 	if (!owner) {
@@ -118,6 +125,37 @@ function linkedToLibraryWhere(libraryId) {
 	};
 }
 
+// filters.status / filters.verified -> user_locations bo'yicha shart (filters dan o'chiriladi).
+// libraryId bo'lmasa (owner) asosiy kutubxonadagi qiymat olinadi
+function libraryFieldsFilter(filters, libraryId) {
+	const conditions = [];
+
+	if (filters.status !== undefined && filters.status !== "") {
+		const status =
+			parseInt(filters.status) === UserStatus.blocked
+				? UserStatus.blocked
+				: UserStatus.active;
+		conditions.push(`ul.status = ${status}`);
+	}
+	if (filters.verified !== undefined && filters.verified !== "") {
+		const verified = ["1", "true", true, 1].includes(filters.verified);
+		conditions.push(`ul.verified = ${verified}`);
+	}
+	delete filters.status;
+	delete filters.verified;
+	if (!conditions.length) return null;
+
+	const libraryCondition = libraryId
+		? `ul."locationId" = ${Number(libraryId) || 0}`
+		: `ul."locationId" = "users"."locationId"`;
+
+	return sequelize.literal(
+		`EXISTS (SELECT 1 FROM user_locations ul WHERE ul."userId" = "users"."id" AND ${libraryCondition} AND ${conditions.join(
+			" AND "
+		)})`
+	);
+}
+
 const BIRTH_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // tug'ilgan sana Toshkent vaqti bo'yicha "YYYY-MM-DD"
@@ -206,9 +244,16 @@ const UserController = {
 
 			await addressReference(user);
 
-			const result = await User.create(user);
+			// blok, balans, izoh, verified - kutubxonaga bog'liq. xodimlarda users da qoladi
+			const libraryFields = isStaff(user) ? {} : takeLibraryFields(user);
 
-			return res.json(result.toJSON()).status(201);
+			const result = await User.create(user);
+			await setLibraryFields(result.id, result.locationId, libraryFields);
+
+			const json = result.toJSON();
+			await applyLibraryFields([json], currentLibraryId(req));
+
+			return res.json(json).status(201);
 		} catch (e) {
 			next(e);
 		}
@@ -222,16 +267,28 @@ const UserController = {
 				},
 			};
 
+			const libraryId = currentLibraryId(req);
+
 			if (!req.user.owner) {
-				Object.assign(
-					customWhere,
-					linkedToLibraryWhere(currentLibraryId(req))
-				);
+				Object.assign(customWhere, linkedToLibraryWhere(libraryId));
+			}
+
+			// status / verified bo'yicha filtr kutubxonadagi qiymat bo'yicha
+			const query = { ...req.query };
+			if (query.filters) {
+				query.filters = { ...query.filters };
+				const libraryFilter = libraryFieldsFilter(query.filters, libraryId);
+				if (libraryFilter) {
+					customWhere[Op.and] = [
+						...(customWhere[Op.and] || []),
+						libraryFilter,
+					];
+				}
 			}
 
 			let { count, rows } = await User.findAndCountAll(
 				getListOptions(
-					req.query,
+					query,
 					{
 						// "i{id}.{firstName} {lastName} {passportId} {phone} {extraPhone} {extraPhone2}"
 						// "i{id}." prefiksi id bo'yicha qidirish uchun saqlangan
@@ -282,10 +339,13 @@ const UserController = {
 					customWhere
 				)
 			);
+			const items = rows.map((r) => r.toJSON());
+			await applyLibraryFields(items, libraryId);
+
 			return res
 				.json({
 					page: parseInt(req.query.page) || 1,
-					items: rows,
+					items,
 					totalCount: count,
 				})
 				.status(200);
@@ -305,7 +365,10 @@ const UserController = {
 
 			if (!result) return res.json({ message: "Not found" }).status(404);
 
-			return res.json(result.toJSON()).status(200);
+			const json = result.toJSON();
+			await applyLibraryFields([json], currentLibraryId(req));
+
+			return res.json(json).status(200);
 		} catch (e) {
 			next(e);
 		}
@@ -319,6 +382,16 @@ const UserController = {
 			delete user.phone;
 			delete user.phoneVerified;
 			delete user.code;
+			delete user.otherLibraryBlocks;
+
+			const existing = await User.findByPk(req.params.id, {
+				attributes: ["id", "addressId", "locationId", "librarian", "owner", "moderator"],
+			});
+
+			if (!existing) return res.json({ message: "Not found" }).status(404);
+
+			// blok, balans, izoh, verified - joriy kutubxonadagi ulanishga yoziladi
+			const libraryFields = isStaff(existing) ? {} : takeLibraryFields(user);
 
 			// asosiy kutubxona (locationId) tahrirda o'zgarmaydi. kitobxon
 			// boshqa kutubxonalarga user_locations orqali ulanadi
@@ -343,13 +416,6 @@ const UserController = {
 			}
 
 			if (user.address) {
-				const existing = await User.findByPk(req.params.id, {
-					attributes: ["id", "addressId"],
-				});
-
-				if (!existing)
-					return res.json({ message: "Not found" }).status(404);
-
 				await addressReference(user, existing.addressId);
 			} else {
 				delete user.address;
@@ -362,6 +428,12 @@ const UserController = {
 
 			if (!result[0])
 				return res.json({ message: "Not found" }).status(404);
+
+			await setLibraryFields(
+				existing.id,
+				currentLibraryId(req) || existing.locationId,
+				libraryFields
+			);
 
 			return UserController.getOne()(req, res, next);
 			// return res.json({ message: "Updated" }).status(200);

@@ -2,6 +2,8 @@ const { Scenes, Markup } = require("telegraf");
 const { profileScene } = require(".");
 const UserStatus = require("../../constants/UserStatus");
 const { User } = require("../../database/models");
+const { getLink } = require("../../services/ReaderLibrary");
+const { getUserLocationId } = require("../cache");
 const { backButton } = require("../utils/keyboards");
 const { BaseScene } = Scenes;
 const UserStatusTrasnlate = {
@@ -27,6 +29,11 @@ Scene.enter(async (ctx) => {
 			id: ctx.session.user.id,
 		},
 	});
+	// balans - botda tanlangan kutubxonadagi qiymat
+	const link = await getLink(user.id, getUserLocationId(ctx.session.user), {
+		attributes: ["balance"],
+	});
+	const balance = link?.balance || 0;
 
 	const text = `${getGenderIcon(user.gender)} Kitobxon: <b>${
 		user.firstName
@@ -37,7 +44,7 @@ Scene.enter(async (ctx) => {
 		0,
 		2
 	)}******${user.passportId.slice(-1)}</b>
-${user.balance ? `💳 Balans: <b>${user.balance} so'm</b>` : ""}`;
+${balance ? `💳 Balans: <b>${balance} so'm</b>` : ""}`;
 
 	const keyboard = Markup.inlineKeyboard([
 		[Markup.button.switchToCurrentChat("📘 O'qigan kitoblarim", "my_1")],

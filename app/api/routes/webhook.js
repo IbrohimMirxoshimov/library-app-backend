@@ -2,6 +2,7 @@ const { Router } = require("express");
 const { ESKIZ_WEBHOOK_ROUTE } = require("../../constants/mix");
 const UserStatus = require("../../constants/UserStatus");
 const User = require("../../database/models/User");
+const UserLocation = require("../../database/models/UserLocation");
 const Sms = require("../../database/models/Sms");
 const express = require("express");
 const EskizStatuses = {
@@ -47,17 +48,22 @@ module.exports = () => {
 					if (!message_id) return;
 
 					if (data.status === EskizStatuses.REJECTED) {
-						await User.update(
-							{
-								blockingReason: `${data.phone_number} raqamiga sms yuborib bo'lmadi`,
-								status: UserStatus.blocked,
-							},
-							{
-								where: {
-									phone: data.phone_number.slice(3),
+						// raqam noto'g'ri - kitobxon hamma ulangan kutubxonalarda bloklanadi
+						const users = await User.findAll({
+							where: { phone: data.phone_number.slice(3) },
+							attributes: ["id"],
+							raw: true,
+						});
+
+						if (users.length) {
+							await UserLocation.update(
+								{
+									blockingReason: `${data.phone_number} raqamiga sms yuborib bo'lmadi`,
+									status: UserStatus.blocked,
 								},
-							}
-						);
+								{ where: { userId: users.map((u) => u.id) } }
+							);
+						}
 					}
 
 					await Sms.update(
