@@ -125,6 +125,15 @@ function linkedToLibraryWhere(libraryId) {
 	};
 }
 
+// body dan kutubxona maydonlarini ajratadi. xodimda faqat status users da qoladi
+function splitLibraryFields(body, target) {
+	const fields = takeLibraryFields(body);
+	if (!isStaff(target)) return fields;
+
+	if (fields.status !== undefined) body.status = fields.status;
+	return {};
+}
+
 // filters.status / filters.verified -> user_locations bo'yicha shart (filters dan o'chiriladi).
 // libraryId bo'lmasa (owner) asosiy kutubxonadagi qiymat olinadi
 function libraryFieldsFilter(filters, libraryId) {
@@ -244,8 +253,8 @@ const UserController = {
 
 			await addressReference(user);
 
-			// blok, balans, izoh, verified - kutubxonaga bog'liq. xodimlarda users da qoladi
-			const libraryFields = isStaff(user) ? {} : takeLibraryFields(user);
+			// blok, balans, izoh, verified - kutubxonaga bog'liq (xodimlarda faqat users.status)
+			const libraryFields = splitLibraryFields(user, user);
 
 			const result = await User.create(user);
 			await setLibraryFields(result.id, result.locationId, libraryFields);
@@ -391,7 +400,8 @@ const UserController = {
 			if (!existing) return res.json({ message: "Not found" }).status(404);
 
 			// blok, balans, izoh, verified - joriy kutubxonadagi ulanishga yoziladi
-			const libraryFields = isStaff(existing) ? {} : takeLibraryFields(user);
+			// (xodimlarda faqat users.status)
+			const libraryFields = splitLibraryFields(user, existing);
 
 			// asosiy kutubxona (locationId) tahrirda o'zgarmaydi. kitobxon
 			// boshqa kutubxonalarga user_locations orqali ulanadi

@@ -49,12 +49,6 @@ const User = sequelize.define(
 		extraPhone2: {
 			type: DataTypes.STRING,
 		},
-		blockingReason: {
-			type: DataTypes.TEXT,
-		},
-		extra: {
-			type: DataTypes.TEXT,
-		},
 		password: {
 			type: DataTypes.STRING,
 			validate: {
@@ -91,17 +85,11 @@ const User = sequelize.define(
 			type: DataTypes.BOOLEAN,
 			defaultValue: false,
 		},
-		verified: {
-			type: DataTypes.BOOLEAN,
-			defaultValue: false,
-		},
+		// faqat xodimlar (kutubxonachi) uchun. kitobxonning blok/balans/izoh/verified
+		// qiymatlari har bir kutubxonada alohida - user_locations da
 		status: {
 			type: DataTypes.INTEGER,
 			defaultValue: UserStatus.active,
-		},
-		balance: {
-			type: DataTypes.INTEGER,
-			defaultValue: 0,
 		},
 		// asosiy raqam (phone) tasdiqlangan vaqt. raqam o'zgarsa null bo'ladi
 		phoneVerified: {
