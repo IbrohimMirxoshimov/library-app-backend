@@ -29,7 +29,7 @@ function clearing(body) {
 
 	return {
 		...body,
-		phone: clearPhoneNumber(body.phone),
+		phone: body.phone && clearPhoneNumber(body.phone),
 		extraPhone: body.extraPhone && clearPhoneNumber(body.extraPhone),
 		extraPhone2: body.extraPhone2 && clearPhoneNumber(body.extraPhone2),
 	};
@@ -118,13 +118,14 @@ const UserController = {
 				}
 			}
 
+			delete user.phoneVerified;
 			if (user.code) {
 				if (!Verification.verifyCode("998" + user.phone, user.code)) {
 					throw HttpError(403, "Sms kodi xato yoki eskirgan!");
 				}
-				delete user.code;
-				user.phoneVerified = true;
+				user.phoneVerified = new Date();
 			}
+			delete user.code;
 
 			await addressReference(user);
 
@@ -238,6 +239,10 @@ const UserController = {
 			removeRolesFromBody(req);
 
 			let user = clearing(req.body);
+			// asosiy raqam faqat PUT /users/:id/phone orqali o'zgaradi
+			delete user.phone;
+			delete user.phoneVerified;
+			delete user.code;
 
 			if (user.librarian) {
 				if (!user.libraryId) throw HttpError(400, "Location must have");
@@ -285,6 +290,54 @@ const UserController = {
 
 			return UserController.getOne()(req, res, next);
 			// return res.json({ message: "Updated" }).status(200);
+		} catch (e) {
+			next(e);
+		}
+	},
+	// asosiy raqamni o'zgartirish. kod bo'lsa yangi raqam darhol tasdiqlanadi,
+	// bo'lmasa tasdiqlash bekor qilinadi
+	changePhone: () => async (req, res, next) => {
+		try {
+			const user = await User.findByPk(req.params.id, {
+				attributes: ["id", "phone"],
+			});
+
+			if (!user) throw HttpError(404);
+
+			const phone = req.body.phone;
+			let phoneVerified = null;
+
+			if (req.body.code) {
+				if (!Verification.verifyCode("998" + phone, req.body.code)) {
+					throw HttpError(403, "Sms kodi xato yoki eskirgan!");
+				}
+				phoneVerified = new Date();
+			}
+
+			await user.update({ phone, phoneVerified });
+
+			return UserController.getOne()(req, res, next);
+		} catch (e) {
+			next(e);
+		}
+	},
+	// hozirgi asosiy raqamni sms kod bilan tasdiqlash
+	verifyPhone: () => async (req, res, next) => {
+		try {
+			const user = await User.findByPk(req.params.id, {
+				attributes: ["id", "phone"],
+			});
+
+			if (!user) throw HttpError(404);
+			if (!user.phone) throw HttpError(400, "Kitobxonda raqam yo'q");
+
+			if (!Verification.verifyCode("998" + user.phone, req.body.code)) {
+				throw HttpError(403, "Sms kodi xato yoki eskirgan!");
+			}
+
+			await user.update({ phoneVerified: new Date() });
+
+			return UserController.getOne()(req, res, next);
 		} catch (e) {
 			next(e);
 		}

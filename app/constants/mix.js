@@ -19,6 +19,8 @@ const SmsStatusEnum = {
 const GATEWAY_SMS_DAILY_LIMIT = 220;
 // Chorsu, the original library with its own channel posts
 const MAIN_LOCATION_ID = 1;
+// kitob olishda asosiy raqam shuncha oyda qayta tasdiqlanishi kerak
+const PHONE_VERIFICATION_VALID_MONTHS = 3;
 
 module.exports = {
 	ESKIZ_WEBHOOK_ROUTE: "/eskiz",
@@ -30,4 +32,5 @@ module.exports = {
 	SmsStatusEnum,
 	GATEWAY_SMS_DAILY_LIMIT,
 	MAIN_LOCATION_ID,
+	PHONE_VERIFICATION_VALID_MONTHS,
 };

@@ -12,6 +12,8 @@ const addToRentValidator = celebrate({
 		leasedAt: Joi.string().required(),
 		returningDate: Joi.string().required(),
 		customId: Joi.number().optional(),
+		// false bo'lsa kutubxonada yoqilgan sms tasdiqlash shu ijara uchun o'tkazib yuboriladi
+		smsVerification: Joi.boolean().optional(),
 	}),
 });
 

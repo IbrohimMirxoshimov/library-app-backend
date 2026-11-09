@@ -9,6 +9,10 @@ const { report } = require("../services/RentServices");
 const StatServices = require("../services/StatServices");
 const HttpError = require("../utils/HttpError");
 const {
+	getPhoneVerificationStatus,
+	PhoneVerificationReason,
+} = require("../utils/phoneVerification");
+const {
 	getReportText,
 	getRentDurationInDays,
 	getReturningDateIfIsNotWorkingDay,
@@ -229,6 +233,39 @@ async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 	throw HttpError(400, "Kutilmagan xatolik");
 }
 
+// kutubxonada sms tasdiqlash yoqilgan bo'lsa kitobxonning asosiy raqami
+// tasdiqlangan va 3 oydan eskirmagan bo'lishi kerak
+async function getPhoneVerification(user_id, location_id) {
+	const location = await Location.findByPk(location_id, {
+		attributes: ["id", "smsVerification"],
+	});
+
+	if (!location || !location.smsVerification) return { required: false };
+
+	const user = await User.findByPk(user_id, {
+		attributes: ["id", "phone", "phoneVerified"],
+	});
+	const status = getPhoneVerificationStatus(user);
+
+	if (status.verified) return { required: false };
+
+	return {
+		required: true,
+		phone: user.phone,
+		reason: status.reason,
+	};
+}
+
+function phoneVerificationError(phoneVerification) {
+	return HttpError(
+		400,
+		phoneVerification.reason === PhoneVerificationReason.expired
+			? "Kitobxon raqami tasdiqlanganiga 3 oydan oshdi. SMS bilan qayta tasdiqlang!"
+			: "Kitobxon raqami tasdiqlanmagan. SMS bilan tasdiqlang!",
+		"PhoneVerificationRequired"
+	);
+}
+
 async function checkToAdd(req) {
 	if (req.body.returnedAt) throw HttpError(400);
 	if (req.body.returningDate < req.body.leasedAt)
@@ -374,9 +411,13 @@ const RentController = {
 	},
 	checkToAdd: () => async (req, res, next) => {
 		try {
-			await checkToAdd(req);
+			const stock = await checkToAdd(req);
+			const phoneVerification = await getPhoneVerification(
+				req.body.userId,
+				stock.locationId
+			);
 
-			return res.json({ message: "OK" }).status(200);
+			return res.json({ message: "OK", phoneVerification }).status(200);
 		} catch (e) {
 			next(e);
 		}
@@ -386,6 +427,18 @@ const RentController = {
 
 		try {
 			const stock = await checkToAdd(req);
+
+			if (req.body.smsVerification !== false) {
+				const phoneVerification = await getPhoneVerification(
+					req.body.userId,
+					stock.locationId
+				);
+				if (phoneVerification.required) {
+					throw phoneVerificationError(phoneVerification);
+				}
+			}
+			delete req.body.smsVerification;
+
 			// modify for working days
 			req.body.returningDate = getReturningDateIfIsNotWorkingDay(
 				req.body

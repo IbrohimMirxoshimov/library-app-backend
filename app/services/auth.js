@@ -85,7 +85,7 @@ module.exports = {
 				await User.update(
 					{
 						...userToRegistr,
-						phoneVerified: true,
+						phoneVerified: new Date(),
 					},
 					{
 						where: {
@@ -99,7 +99,7 @@ module.exports = {
 			user = (
 				await User.create({
 					...userToRegistr,
-					phoneVerified: true,
+					phoneVerified: new Date(),
 				})
 			).toJSON();
 		}

@@ -63,9 +63,11 @@ TEZROQ`;
 		getText: (fullName, librarianPhone) =>
 			`Sizni ${fullName} tanishi sifatida raqamingizni qoldirdi. Agar bu insonni tanimasangiz ${librarianPhone} raqamiga qo'ng'iroq qiling`,
 	},
+	// eskiz shabloni bilan bir xil bo'lishi shart (‘ belgisi ham)
 	verificationCode: {
-		id: 9911,
-		getText: (code) => `Tasdiqlash kodi: ${code}\nMehr kutubxonasi`,
+		id: 22329,
+		getText: (code) =>
+			`Mehr kutubxonasi platformasiga ro‘yxatdan o‘tish uchun raqamni tasdiqlash kodi: ${code}`,
 	},
 };
 

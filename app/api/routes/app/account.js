@@ -31,6 +31,7 @@ module.exports = (app) => {
 			try {
 				delete req.body.owner;
 				delete req.body.phone;
+				delete req.body.phoneVerified;
 				delete req.body.librarian;
 				delete req.body.moderator;
 				delete req.body.username;

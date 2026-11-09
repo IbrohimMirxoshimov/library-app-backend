@@ -29,6 +29,12 @@ const Location = sequelize.define(
 			allowNull: false,
 			defaultValue: false,
 		},
+		// ijara qo'shishda kitobxonning asosiy raqami sms bilan tasdiqlanishi
+		smsVerification: {
+			type: DataTypes.BOOLEAN,
+			allowNull: false,
+			defaultValue: false,
+		},
 	},
 	{
 		paranoid: true,

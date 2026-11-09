@@ -103,9 +103,10 @@ const User = sequelize.define(
 			type: DataTypes.INTEGER,
 			defaultValue: 0,
 		},
+		// asosiy raqam (phone) tasdiqlangan vaqt. raqam o'zgarsa null bo'ladi
 		phoneVerified: {
-			type: DataTypes.BOOLEAN,
-			defaultValue: false,
+			type: DataTypes.DATE,
+			allowNull: true,
 		},
 		telegramId: {
 			type: DataTypes.STRING,
