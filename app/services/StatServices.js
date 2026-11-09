@@ -72,8 +72,7 @@ const StatServices = {
 						count(*) AS reading,
 						count(*) FILTER (WHERE r."returningDate" < now()) AS expired
 					FROM rents r
-					INNER JOIN stocks s ON s.id = r."stockId"
-					WHERE s."locationId" = :locationId
+					WHERE r."locationId" = :locationId
 						AND r."returnedAt" IS NULL
 						AND r."deletedAt" IS NULL
 						AND r.rejected = false`,
@@ -123,8 +122,7 @@ const StatServices = {
 							count(*) AS count,
 							count(DISTINCT (r."createdAt" AT TIME ZONE :tz)::date) AS active_days
 						FROM rents r
-						INNER JOIN stocks s ON s.id = r."stockId"
-						WHERE s."locationId" = :locationId
+						WHERE r."locationId" = :locationId
 							AND r."deletedAt" IS NULL AND r.rejected = false
 							AND r."createdAt" >= :from AND r."createdAt" < :to`,
 						params
@@ -132,8 +130,7 @@ const StatServices = {
 					query(
 						`SELECT count(*) AS count
 						FROM rents r
-						INNER JOIN stocks s ON s.id = r."stockId"
-						WHERE s."locationId" = :locationId
+						WHERE r."locationId" = :locationId
 							AND r."deletedAt" IS NULL AND r.rejected = false
 							AND r."returnedAt" >= :from AND r."returnedAt" < :to`,
 						params
@@ -153,16 +150,14 @@ const StatServices = {
 							SELECT date_trunc(:unit, r."createdAt" AT TIME ZONE :tz) AS bucket,
 								1 AS leased, 0 AS returned
 							FROM rents r
-							INNER JOIN stocks s ON s.id = r."stockId"
-							WHERE s."locationId" = :locationId
+							WHERE r."locationId" = :locationId
 								AND r."deletedAt" IS NULL AND r.rejected = false
 								AND r."createdAt" >= :from AND r."createdAt" < :to
 							UNION ALL
 							SELECT date_trunc(:unit, r."returnedAt" AT TIME ZONE :tz),
 								0, 1
 							FROM rents r
-							INNER JOIN stocks s ON s.id = r."stockId"
-							WHERE s."locationId" = :locationId
+							WHERE r."locationId" = :locationId
 								AND r."deletedAt" IS NULL AND r.rejected = false
 								AND r."returnedAt" >= :from AND r."returnedAt" < :to
 						) t
@@ -176,7 +171,7 @@ const StatServices = {
 							SELECT s."bookId", count(*) AS count
 							FROM rents r
 							INNER JOIN stocks s ON s.id = r."stockId"
-							WHERE s."locationId" = :locationId
+							WHERE r."locationId" = :locationId
 								AND r."deletedAt" IS NULL AND r.rejected = false
 								AND r."createdAt" >= :from AND r."createdAt" < :to
 							GROUP BY s."bookId"
@@ -193,8 +188,7 @@ const StatServices = {
 						FROM (
 							SELECT r."userId", count(*) AS count
 							FROM rents r
-							INNER JOIN stocks s ON s.id = r."stockId"
-							WHERE s."locationId" = :locationId
+							WHERE r."locationId" = :locationId
 								AND r."deletedAt" IS NULL AND r.rejected = false
 								AND r."returnedAt" >= :from AND r."returnedAt" < :to
 								AND r."returnedAt" - r."leasedAt" > interval '12 hours'
@@ -243,7 +237,7 @@ FROM (
 	FROM rents 
 	LEFT JOIN stocks 
 	ON rents."stockId" = stocks.id 
-	WHERE rents.rejected = false and stocks."locationId" = :locationId and 
+	WHERE rents.rejected = false and rents."locationId" = :locationId and 
 	rents."createdAt" between :from and :untill
 	GROUP BY stocks."bookId"
 ) s
@@ -270,20 +264,13 @@ LIMIT :size`,
 	}) {
 		return Rent.count({
 			where: {
+				locationId: locationId,
 				rejected: {
 					[Op.not]: true,
 				},
 				createdAt: {
 					[Op.between]: [fromDate, untillDate],
 				},
-			},
-			include: {
-				model: Stock,
-				as: Stock,
-				where: {
-					locationId: locationId,
-				},
-				paranoid: false,
 			},
 		});
 	},
@@ -303,9 +290,9 @@ LIMIT :size`,
 				].join(", ")}
 FROM users
 INNER JOIN rents ON users.id = rents."userId"
-INNER JOIN stocks ON stocks.id = rents."stockId" AND stocks."locationId" = :locationId
 WHERE 
-  rents.rejected = false 
+  rents."locationId" = :locationId
+  AND rents.rejected = false 
   AND EXTRACT(EPOCH FROM (rents."returnedAt" - rents."leasedAt")) / 3600 > 12
   AND rents."returnedAt" BETWEEN :from AND :untill
   AND rents."deletedAt" IS NULL
@@ -377,8 +364,7 @@ LIMIT :size`,
 		const [[{ count: reading_books_count }]] = await sequelize.query(
 			`SELECT count(rents.id)
 			FROM rents
-			INNER JOIN stocks ON stocks.id = rents."stockId"
-			WHERE rents."returnedAt" is null and rents."deletedAt" is null and rents.rejected = false and stocks."locationId" = :locationId`,
+			WHERE rents."returnedAt" is null and rents."deletedAt" is null and rents.rejected = false and rents."locationId" = :locationId`,
 			{
 				replacements: {
 					locationId: locationId,
@@ -389,10 +375,8 @@ LIMIT :size`,
 		// expired leases
 		const [[{ count: expired_leases }]] = await sequelize.query(
 			`SELECT count("rent".id) AS "count" FROM "rents" AS "rent" 
-			LEFT JOIN stocks
-			ON stocks.id = "rent"."stockId" 
 			WHERE "rent"."deletedAt" IS NULL 
-			AND stocks."locationId" = ${locationId} 
+			AND "rent"."locationId" = ${locationId} 
 			AND "rent"."returnedAt" IS NULL 
 			AND "rent"."deletedAt" IS NULL 
 			AND "rent"."rejected" = false 
@@ -403,9 +387,8 @@ LIMIT :size`,
 		const [[{ count: dayly_leasing_books_avarage_count_of_last_month }]] =
 			await sequelize.query(
 				`SELECT count(rents.id) FROM "rents"
-			INNER JOIN stocks ON stocks.id = rents."stockId"
 			WHERE rents."deletedAt" IS NULL
-			AND stocks."locationId" = ${locationId}
+			AND rents."locationId" = ${locationId}
 			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				getOneMonthBackDate()
 			)} AND ${pgFormatDate(new Date())})`
@@ -415,9 +398,8 @@ LIMIT :size`,
 		const [[{ count: leased_books_count_of_last_month }]] =
 			await sequelize.query(
 				`SELECT count(rents.id) FROM "rents"
-			INNER JOIN stocks ON stocks.id = rents."stockId"
 			WHERE rents."deletedAt" IS NULL
-			AND stocks."locationId" = ${locationId}
+			AND rents."locationId" = ${locationId}
 			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				getOneMonthBackDate()
 			)} AND ${pgFormatDate(new Date())})`
@@ -427,9 +409,8 @@ LIMIT :size`,
 		const [[{ count: leased_books_count_of_last_week }]] =
 			await sequelize.query(
 				`SELECT count(rents.id) FROM "rents"
-			INNER JOIN stocks ON stocks.id = rents."stockId"
 			WHERE rents."deletedAt" IS NULL
-			AND stocks."locationId" = ${locationId}
+			AND rents."locationId" = ${locationId}
 			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				new Date(Date.now() - 1000 * 60 * 60 * 24 * 7)
 			)} AND ${pgFormatDate(new Date())})`
@@ -439,9 +420,8 @@ LIMIT :size`,
 		const [[{ count: leased_books_count_of_last_24_hours }]] =
 			await sequelize.query(
 				`SELECT count(rents.id) FROM "rents"
-			INNER JOIN stocks ON stocks.id = rents."stockId"
 			WHERE rents."deletedAt" IS NULL
-			AND stocks."locationId" = ${locationId}
+			AND rents."locationId" = ${locationId}
 			AND (rents."createdAt" BETWEEN ${pgFormatDate(
 				new Date(Date.now() - 1000 * 60 * 60 * 24)
 			)} AND ${pgFormatDate(new Date())})`
@@ -466,9 +446,8 @@ LIMIT :size`,
 				date_trunc('day', rents."createdAt") as day,
 				COUNT(rents.id) as count
 			FROM rents
-			INNER JOIN stocks ON stocks.id = rents."stockId"
 			WHERE rents."createdAt" BETWEEN :fromDate AND :untillDate
-			AND stocks."locationId" = :locationId
+			AND rents."locationId" = :locationId
 			GROUP BY day
 			ORDER BY day ASC`,
 			{
@@ -485,9 +464,8 @@ LIMIT :size`,
 				date_trunc('day', rents."returnedAt") as day,
 				COUNT(rents.id) as count
 			FROM rents
-			INNER JOIN stocks ON stocks.id = rents."stockId"
 			WHERE rents."returnedAt" BETWEEN :fromDate AND :untillDate
-			AND stocks."locationId" = :locationId
+			AND rents."locationId" = :locationId
 			GROUP BY day
 			ORDER BY day ASC`,
 			{

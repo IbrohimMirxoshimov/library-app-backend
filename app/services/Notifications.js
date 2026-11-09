@@ -243,12 +243,13 @@ Alhamdulillah!
 						deletedAt: {
 							[Op.is]: null,
 						},
+						locationId: 1,
 					},
 					include: {
 						model: Stock,
 						as: "stock",
 						attributes: ["id", "locationId"],
-						where: { locationId: 1 },
+						required: true,
 					},
 				});
 

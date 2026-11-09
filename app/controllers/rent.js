@@ -91,9 +91,6 @@ async function isUserVerified(user_id) {
 	}).then(Boolean);
 }
 
-// create update location id kiritish kerak
-// statistika hammasini stock.location olib tashlash o'rniga rent location ishlatish kerak
-
 async function isUserActive(user_id) {
 	return User.findOne({
 		where: {
@@ -345,11 +342,6 @@ const RentController = {
 						{
 							model: Stock,
 							as: "stock",
-							where: req.user.owner
-								? undefined
-								: {
-										locationId: req.user.libraryId,
-								  },
 							paranoid: false,
 						},
 						{
@@ -364,7 +356,7 @@ const RentController = {
 							],
 							paranoid: false,
 						},
-					]
+					],
 					// {
 					// 	rejected:
 					// 		req.query.rejected === "all"
@@ -375,6 +367,9 @@ const RentController = {
 					// 					[Op.is]: Boolean(req.query.rejected),
 					// 			  },
 					// }
+					// ijaraning kutubxonasi rents.locationId da (stock boshqa
+					// kutubxonaga o'tkazilsa ham ijara tarixi o'z joyida qoladi)
+					req.user.owner ? undefined : { locationId: req.user.libraryId }
 				)
 			);
 			return res
@@ -451,7 +446,10 @@ const RentController = {
 				}
 			);
 
-			const result = await Rent.create(req.body, { transaction });
+			const result = await Rent.create(
+				{ ...req.body, locationId: stock.locationId },
+				{ transaction }
+			);
 
 			await transaction.commit();
 
@@ -472,13 +470,15 @@ const RentController = {
 		const transaction = await db.sequelize.transaction();
 
 		try {
-			const rent = await Rent.findByPk(parseInt(req.params.id), {
+			const rent = await Rent.findOne({
+				where: {
+					id: parseInt(req.params.id),
+					locationId: req.user.libraryId,
+				},
 				include: {
 					model: Stock,
 					as: "stock",
-					where: {
-						locationId: req.user.libraryId,
-					},
+					required: true,
 					paranoid: false,
 				},
 				paranoid: false,
@@ -570,13 +570,15 @@ const RentController = {
 	},
 	reject: () => async (req, res, next) => {
 		try {
-			const rent = await Rent.findByPk(parseInt(req.params.id), {
+			const rent = await Rent.findOne({
+				where: {
+					id: parseInt(req.params.id),
+					locationId: req.user.libraryId,
+				},
 				include: {
 					model: Stock,
 					as: "stock",
-					where: {
-						locationId: req.user.libraryId,
-					},
+					required: true,
 				},
 			});
 
@@ -594,13 +596,15 @@ const RentController = {
 	},
 	delete: () => async (req, res, next) => {
 		try {
-			const rent = await Rent.findByPk(parseInt(req.params.id), {
+			const rent = await Rent.findOne({
+				where: {
+					id: parseInt(req.params.id),
+					locationId: req.user.libraryId,
+				},
 				include: {
 					model: Stock,
 					as: "stock",
-					where: {
-						locationId: req.user.libraryId,
-					},
+					required: true,
 					paranoid: false,
 				},
 			});
@@ -635,16 +639,15 @@ const RentController = {
 					returnedAt: {
 						[Op.is]: null,
 					},
+					...(req.user.owner
+						? {}
+						: { locationId: req.user.libraryId }),
 				},
 				include: {
 					model: Stock,
 					as: "stock",
 					attributes: ["id"],
-					where: req.user.owner
-						? undefined
-						: {
-								locationId: req.user.libraryId,
-						  },
+					required: true,
 					paranoid: false,
 					include: {
 						model: Book,
@@ -688,6 +691,9 @@ const RentController = {
 	},
 	edit: () => async (req, res, next) => {
 		try {
+			// ijaraning kutubxonasi faqat ijara yaratilganda belgilanadi
+			delete req.body.locationId;
+
 			const rent = await Rent.findOne({
 				where: { id: req.params.id },
 			});

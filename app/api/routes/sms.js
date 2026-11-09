@@ -1,6 +1,6 @@
 const { celebrate, Joi } = require("celebrate");
 const { Router } = require("express");
-const { Op, Sequelize } = require("sequelize");
+const { Op } = require("sequelize");
 const { User, SmsBulk, Rent, Sms } = require("../../database/models");
 const { getOneDayBackDate } = require("../../utils/date");
 const middlewares = require("../middlewares");
@@ -92,14 +92,7 @@ module.exports = (app) => {
 							};
 						}
 
-						// ijaraning kutubxonasi = kitob nusxasining kutubxonasi
-						where.stockId = {
-							[Op.in]: Sequelize.literal(
-								`(SELECT id FROM stocks WHERE "locationId" = ${
-									Number(req.user.locationId) || 0
-								})`
-							),
-						};
+						where.locationId = Number(req.user.locationId) || 0;
 
 						const rents = await Rent.findAll({
 							include: {

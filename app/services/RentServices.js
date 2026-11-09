@@ -34,9 +34,7 @@ const RentServices = {
 				{
 					model: Stock,
 					as: "stock",
-					where: {
-						locationId: locationId,
-					},
+					required: true,
 					paranoid: false,
 					attributes: ["id", "bookId"],
 					include: {
@@ -67,6 +65,7 @@ const RentServices = {
 				},
 			],
 			where: {
+				locationId: locationId,
 				returnedAt: {
 					[Op.is]: null,
 				},

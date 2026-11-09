@@ -165,12 +165,13 @@ const Crons = {
 						deletedAt: {
 							[Op.is]: null,
 						},
+						locationId: locationId,
 					},
 					include: {
 						model: Stock,
 						as: "stock",
 						attributes: ["id", "locationId"],
-						where: { locationId: locationId },
+						required: true,
 						paranoid: false,
 						include: {
 							as: "book",
