@@ -3,7 +3,7 @@ const { getListOptions } = require("../api/middlewares/utils");
 const { DEV_ID } = require("../config");
 const UserStatus = require("../constants/UserStatus");
 const db = require("../database/models");
-const { Rent, Stock, User, Book, Comment, Location } = db;
+const { Rent, Stock, User, Book, Comment, Location, UserLocation } = db;
 const { sendMessageFromTelegramBot } = require("../services/Notifications");
 const { report } = require("../services/RentServices");
 const StatServices = require("../services/StatServices");
@@ -199,15 +199,17 @@ async function canUserGetRent(userId, libraryId, bookPrice = 50000) {
 		throw HttpError(400, "User not found");
 	}
 
-	const user = await User.findOne({
-		where: {
-			id: userId,
-			locationId: libraryId,
-		},
-	});
+	const [user, linked] = await Promise.all([
+		User.findByPk(userId),
+		UserLocation.count({ where: { userId, locationId: libraryId } }),
+	]);
 
 	if (!user) {
 		throw HttpError(400, "User not found");
+	}
+
+	if (!linked) {
+		throw HttpError(400, "Kitobxon kutubxonangizga ulanmagan");
 	}
 
 	if (user.status === UserStatus.active) {

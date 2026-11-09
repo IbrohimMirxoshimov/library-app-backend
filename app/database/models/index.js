@@ -20,6 +20,7 @@ db.News = require("./News");
 db.Sms = require("./Sms");
 db.SmsBulk = require("./SmsBulk");
 db.Device = require("./Device");
+db.UserLocation = require("./UserLocation");
 
 // relations
 db.User.hasMany(db.Rent);
@@ -126,6 +127,34 @@ db.Device.belongsTo(db.Location);
 
 db.Device.hasMany(db.Sms);
 db.Sms.belongsTo(db.Device);
+
+db.User.belongsToMany(db.Location, {
+	through: db.UserLocation,
+	foreignKey: "userId",
+	otherKey: "locationId",
+	as: "libraries",
+});
+db.Location.belongsToMany(db.User, {
+	through: db.UserLocation,
+	foreignKey: "locationId",
+	otherKey: "userId",
+	as: "readers",
+});
+
+// kitobxon qaysi yo'l bilan yaratilmasin (dashboard, bot, ilova) yoki asosiy
+// kutubxonasi o'zgarsa, o'sha kutubxonaga ulangan bo'ladi
+async function linkMainLocation(user, options) {
+	if (!user.locationId) return;
+
+	await db.UserLocation.findOrCreate({
+		where: { userId: user.id, locationId: user.locationId },
+		transaction: options.transaction,
+	});
+}
+db.User.afterCreate(linkMainLocation);
+db.User.afterUpdate((user, options) => {
+	if (user.changed("locationId")) return linkMainLocation(user, options);
+});
 
 db.sequelize = sequelize;
 

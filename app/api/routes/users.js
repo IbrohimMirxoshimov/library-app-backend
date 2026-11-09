@@ -13,6 +13,7 @@ module.exports = (app) => {
 	app.use("/users", middlewares.isAuth, isLibrarian, route);
 
 	route.get("/", UserController.getList());
+	route.get("/lookup", UserController.lookup());
 	route.get("/:id", UserController.getOne());
 	route.post("/", UserController.add());
 	route.put(
@@ -33,6 +34,16 @@ module.exports = (app) => {
 			}),
 		}),
 		UserController.verifyPhone()
+	);
+	route.post(
+		"/:id/link",
+		celebrate({
+			body: Joi.object({
+				passportId: Joi.string().required(),
+				birthDate: Joi.string().required(),
+			}),
+		}),
+		UserController.link()
 	);
 	route.put("/:id", UserController.update());
 	route.delete("/:id", isOwner, middlewares.destroy(User));

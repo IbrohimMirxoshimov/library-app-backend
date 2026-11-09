@@ -1,6 +1,14 @@
 const { Op } = require("sequelize");
 const { getListOptions } = require("../api/middlewares/utils");
-const { User, Address, Region, Town } = require("../database/models");
+const {
+	User,
+	Address,
+	Region,
+	Town,
+	Location,
+	UserLocation,
+	sequelize,
+} = require("../database/models");
 const Verification = require("../services/Verification");
 const HttpError = require("../utils/HttpError");
 const { searchWhere, searchRankOrder } = require("../utils/search");
@@ -92,6 +100,71 @@ async function addressReference(user, existingAddressId) {
 	}
 }
 
+// kutubxonachining kutubxonasi
+function currentLibraryId(req) {
+	return Number(req.user.libraryId || req.user.locationId) || null;
+}
+
+// kutubxonaga ulangan kitobxonlar sharti (user_locations orqali)
+function linkedToLibraryWhere(libraryId) {
+	return {
+		id: {
+			[Op.in]: sequelize.literal(
+				`(SELECT "userId" FROM user_locations WHERE "locationId" = ${
+					Number(libraryId) || 0
+				})`
+			),
+		},
+	};
+}
+
+const BIRTH_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// tug'ilgan sana Toshkent vaqti bo'yicha "YYYY-MM-DD"
+function birthDateKey(date) {
+	if (!date) return null;
+	return new Date(date).toLocaleDateString("en-CA", {
+		timeZone: "Asia/Tashkent",
+	});
+}
+
+// passport + tug'ilgan sana bo'yicha mavjud kitobxonni topish.
+// bazada sana bo'sh bo'lsa passportning o'zi yetarli
+async function findByPassportAndBirthDate(passportId, birthDate) {
+	const user = await User.findOne({
+		where: { passportId },
+		attributes: ["id", "firstName", "lastName", "birthDate"],
+		include: {
+			model: Location,
+			as: "libraries",
+			attributes: ["id", "name"],
+			through: { attributes: [] },
+		},
+	});
+
+	if (!user) return { user: null, passportExists: false };
+
+	if (user.birthDate && birthDateKey(user.birthDate) !== birthDate) {
+		return { user: null, passportExists: true };
+	}
+
+	return { user, passportExists: true };
+}
+
+function parseLookupParams(source) {
+	const passportId = String(source.passportId || "")
+		.replace(/\s/g, "")
+		.toUpperCase();
+	const birthDate = String(source.birthDate || "");
+
+	if (!/^[A-Z]{2}\d{7}$/.test(passportId))
+		throw HttpError(400, "Passport noto'g'ri");
+	if (!BIRTH_DATE_PATTERN.test(birthDate))
+		throw HttpError(400, "Tug'ilgan sana noto'g'ri");
+
+	return { passportId, birthDate };
+}
+
 const UserController = {
 	add: () => async (req, res, next) => {
 		try {
@@ -115,7 +188,10 @@ const UserController = {
 				});
 
 				if (isHasByPassportId) {
-					throw HttpError(400, "Bu passport raqami bazada mavjud");
+					throw HttpError(
+						400,
+						"Bu passport raqami bazada mavjud. Passport va tug'ilgan sanani to'g'ri kiritib, kitobxonni kutubxonangizga ulang"
+					);
 				}
 			}
 
@@ -147,7 +223,10 @@ const UserController = {
 			};
 
 			if (!req.user.owner) {
-				customWhere.locationId = req.user.locationId;
+				Object.assign(
+					customWhere,
+					linkedToLibraryWhere(currentLibraryId(req))
+				);
 			}
 
 			let { count, rows } = await User.findAndCountAll(
@@ -241,13 +320,12 @@ const UserController = {
 			delete user.phoneVerified;
 			delete user.code;
 
+			// asosiy kutubxona (locationId) tahrirda o'zgarmaydi. kitobxon
+			// boshqa kutubxonalarga user_locations orqali ulanadi
+			delete user.locationId;
 			if (user.librarian) {
 				if (!user.libraryId) throw HttpError(400, "Location must have");
 				user.locationId = user.libraryId;
-			}
-
-			if (!user.libraryId) {
-				user.locationId = req.user.libraryId;
 			}
 
 			if (req.body.passportId) {
@@ -287,6 +365,69 @@ const UserController = {
 
 			return UserController.getOne()(req, res, next);
 			// return res.json({ message: "Updated" }).status(200);
+		} catch (e) {
+			next(e);
+		}
+	},
+	// passport + tug'ilgan sana bo'yicha bazadagi kitobxonni topish (boshqa kutubxonada bo'lsa ulash uchun)
+	lookup: () => async (req, res, next) => {
+		try {
+			const { passportId, birthDate } = parseLookupParams(req.query);
+			const { user, passportExists } = await findByPassportAndBirthDate(
+				passportId,
+				birthDate
+			);
+
+			if (!user) return res.status(200).json({ found: false, passportExists });
+
+			const libraryId = currentLibraryId(req);
+
+			return res.status(200).json({
+				found: true,
+				user: {
+					id: user.id,
+					firstName: user.firstName,
+					lastName: user.lastName,
+				},
+				libraries: user.libraries.map((l) => ({ id: l.id, name: l.name })),
+				linked: user.libraries.some((l) => l.id === libraryId),
+			});
+		} catch (e) {
+			next(e);
+		}
+	},
+	// mavjud kitobxonni joriy kutubxonaga ulash
+	link: () => async (req, res, next) => {
+		try {
+			const { passportId, birthDate } = parseLookupParams(req.body);
+			const { user } = await findByPassportAndBirthDate(
+				passportId,
+				birthDate
+			);
+
+			if (!user || user.id !== parseInt(req.params.id)) {
+				throw HttpError(400, "Passport yoki tug'ilgan sana mos kelmadi");
+			}
+
+			const libraryId = currentLibraryId(req);
+			if (!libraryId) throw HttpError(400, "Kutubxona aniqlanmadi");
+
+			await sequelize.transaction(async (transaction) => {
+				await UserLocation.findOrCreate({
+					where: { userId: user.id, locationId: libraryId },
+					transaction,
+				});
+
+				// bazada sana bo'sh bo'lsa kiritilgani yoziladi
+				if (!user.birthDate) {
+					await User.update(
+						{ birthDate: new Date(`${birthDate}T00:00:00+05:00`) },
+						{ where: { id: user.id }, transaction }
+					);
+				}
+			});
+
+			return UserController.getOne()(req, res, next);
 		} catch (e) {
 			next(e);
 		}

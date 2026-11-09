@@ -57,7 +57,9 @@ const StatServices = {
 						count(*) FILTER (WHERE gender = 'male') AS male,
 						count(*) FILTER (WHERE gender = 'female') AS female
 					FROM users
-					WHERE phone IS NOT NULL AND "locationId" = :locationId`,
+					INNER JOIN user_locations ul ON ul."userId" = users.id
+					WHERE users.phone IS NOT NULL
+						AND ul."locationId" = :locationId`,
 					params
 				),
 				query(
@@ -138,9 +140,10 @@ const StatServices = {
 					),
 					query(
 						`SELECT count(*) AS count FROM users
-						WHERE "locationId" = :locationId
-							AND phone IS NOT NULL AND "passportId" IS NOT NULL
-							AND "createdAt" >= :from AND "createdAt" < :to`,
+						INNER JOIN user_locations ul ON ul."userId" = users.id
+						WHERE ul."locationId" = :locationId
+							AND users.phone IS NOT NULL AND users."passportId" IS NOT NULL
+							AND ul."createdAt" >= :from AND ul."createdAt" < :to`,
 						params
 					),
 					query(
@@ -332,7 +335,8 @@ LIMIT :size`,
 		const [gender] = await sequelize.query(
 			`SELECT users.gender, count(users.id)
 			FROM users
-			WHERE users.phone is not null and users.gender is not null and users."locationId" = :locationId
+			INNER JOIN user_locations ul ON ul."userId" = users.id
+			WHERE users.phone is not null and users.gender is not null and ul."locationId" = :locationId
 			GROUP BY users.gender`,
 			{
 				replacements: {
@@ -345,7 +349,8 @@ LIMIT :size`,
 		const [[{ count: librarians_count }]] = await sequelize.query(
 			`SELECT count(users.id)
 			FROM users
-			WHERE users.phone is not null and users."locationId" = :locationId`,
+			INNER JOIN user_locations ul ON ul."userId" = users.id
+			WHERE users.phone is not null and ul."locationId" = :locationId`,
 			{
 				replacements: {
 					locationId: locationId,
@@ -560,25 +565,26 @@ LIMIT :size`,
 			return stats;
 		}
 	},
-	getNewUsersCount({
+	// kutubxonaga shu oraliqda ulangan (yangi yoki boshqa kutubxonadan) kitobxonlar
+	async getNewUsersCount({
 		locationId = 1,
 		fromDate = getOneMonthBackDate(),
 		untillDate = new Date(),
 	}) {
-		return User.count({
-			where: {
-				createdAt: {
-					[Op.between]: [fromDate, untillDate],
-				},
-				locationId: locationId,
-				phone: {
-					[Op.not]: null,
-				},
-				passportId: {
-					[Op.not]: null,
-				},
-			},
-		});
+		const [{ count }] = await sequelize.query(
+			`SELECT count(*) AS count FROM users
+			INNER JOIN user_locations ul ON ul."userId" = users.id
+			WHERE ul."locationId" = :locationId
+				AND users.phone IS NOT NULL AND users."passportId" IS NOT NULL
+				AND users."deletedAt" IS NULL
+				AND ul."createdAt" BETWEEN :fromDate AND :untillDate`,
+			{
+				replacements: { locationId, fromDate, untillDate },
+				type: QueryTypes.SELECT,
+			}
+		);
+
+		return Number(count);
 	},
 	async getFewBooks({ locationId = 1, cached = false } = {}) {
 		if (cached) return this.getStats(locationId).then((r) => r.few_books);
