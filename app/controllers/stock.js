@@ -1,6 +1,6 @@
-const { Op, Sequelize } = require("sequelize");
 const { Stock, Book, sequelize } = require("../database/models");
 const HttpError = require("../utils/HttpError");
+const { searchWhere, searchRankOrder } = require("../utils/search");
 
 function getListOptions(
 	{
@@ -26,22 +26,21 @@ function getListOptions(
 	let where = [];
 
 	if (q) {
-		where.push(
-			Sequelize.where(
-				Sequelize.fn(
-					"concat",
-					"i",
-					Sequelize.cast(Sequelize.col("stocks.id"), "varchar"),
-					"b",
-					Sequelize.cast(Sequelize.col("book.id"), "varchar"),
-					".",
-					Sequelize.col("book.name")
-				),
-				{
-					[Op.iLike]: `%${q}%`,
-				}
-			)
+		// "i{stockId}b{bookId}.{book.name}" - "i10b", "b5." kabi id qidiruvlari ishlayveradi
+		const searchCondition = searchWhere(
+			q,
+			(norm) =>
+				`'i' || "stocks"."id" || 'b' || coalesce("book"."id"::text, '') || '.' || ${norm(
+					`coalesce("book"."name", '')`
+				)}`
 		);
+		if (searchCondition) where.push(searchCondition);
+
+		// kitob nomi so'rov bilan boshlanadiganlar birinchi
+		const searchOrder = searchRankOrder(q, [`coalesce("book"."name", '')`]);
+		if (searchOrder && options.order) {
+			options.order = [searchOrder, ...options.order];
+		}
 	}
 
 	if (filters) {

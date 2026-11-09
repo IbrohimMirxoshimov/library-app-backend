@@ -1,8 +1,9 @@
-const { Sequelize, Op } = require("sequelize");
+const { Op } = require("sequelize");
 const { getListOptions } = require("../api/middlewares/utils");
 const { User, Address, Region, Town } = require("../database/models");
 const Verification = require("../services/Verification");
 const HttpError = require("../utils/HttpError");
+const { searchWhere, searchRankOrder } = require("../utils/search");
 const { upperCaseAndClearOtherChars } = require("../utils/string");
 
 const userAttributes = (owner) => {
@@ -153,28 +154,24 @@ const UserController = {
 				getListOptions(
 					req.query,
 					{
-						search: ({ q }) => {
-							return Sequelize.where(
-								Sequelize.fn(
-									"concat",
-									"i",
-									Sequelize.cast(
-										Sequelize.col("users.id"),
-										"varchar"
-									),
-									".",
-									Sequelize.col("firstName"),
-									Sequelize.col("lastName"),
-									Sequelize.col("phone"),
-									Sequelize.col("extraPhone"),
-									Sequelize.col("extraPhone2"),
-									Sequelize.col("passportId")
-								),
-								{
-									[Op.iLike]: `%${q}%`,
-								}
-							);
-						},
+						// "i{id}.{firstName} {lastName} {passportId} {phone} {extraPhone} {extraPhone2}"
+						// "i{id}." prefiksi id bo'yicha qidirish uchun saqlangan
+						search: ({ q }) =>
+							searchWhere(
+								q,
+								(norm) => `'i' || "users"."id" || '.' || ${norm(
+									`coalesce("users"."firstName", '') || ' ' || coalesce("users"."lastName", '') || ' ' || coalesce("users"."passportId", '')`
+								)}
+									|| ' ' || coalesce("users"."phone", '')
+									|| ' ' || coalesce("users"."extraPhone", '')
+									|| ' ' || coalesce("users"."extraPhone2", '')`
+							),
+						// ism-familiya (yoki familiya-ism) so'rov bilan boshlanadiganlar birinchi
+						searchOrder: ({ q }) =>
+							searchRankOrder(q, [
+								`coalesce("users"."firstName", '') || coalesce("users"."lastName", '')`,
+								`coalesce("users"."lastName", '') || coalesce("users"."firstName", '')`,
+							]),
 						options: {
 							attributes: userAttributes(req.user.owner),
 							// logging: (...l) => {

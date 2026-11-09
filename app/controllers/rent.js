@@ -8,6 +8,7 @@ const { sendMessageFromTelegramBot } = require("../services/Notifications");
 const { report } = require("../services/RentServices");
 const StatServices = require("../services/StatServices");
 const HttpError = require("../utils/HttpError");
+const { searchWhere } = require("../utils/search");
 const {
 	getPhoneVerificationStatus,
 	PhoneVerificationReason,
@@ -28,10 +29,11 @@ const BLOCKING_LATE_TIME_FROM_RETURNING_IN_MS =
 // "i{id}c{customId}u{userId}.{firstName}{lastName}p{phone}p{extraPhone}p{extraPhone2}s{stockId}b{bookId}."
 // Oldingi concat(...) bilan aynan bir xil satr (NULL -> ""), lekin concat() (variadic "any")
 // o'rniga "||" + coalesce ishlatilgani uchun har qatorda ancha arzon hisoblanadi.
-const RENT_SEARCH_STRING_SQL = `('i' || "rent"."id"
+// norm - faqat ism-familiyani normallashtiradi (utils/search), qolgani id/telefon - o'zgarmaydi.
+const RENT_SEARCH_STRING_SQL = (norm) => `('i' || "rent"."id"
 	|| 'c' || coalesce("rent"."customId"::text, '')
 	|| 'u' || coalesce("user"."id"::text, '')
-	|| '.' || coalesce("user"."firstName", '') || coalesce("user"."lastName", '')
+	|| '.' || ${norm(`coalesce("user"."firstName", '') || coalesce("user"."lastName", '')`)}
 	|| 'p' || coalesce("user"."phone", '')
 	|| 'p' || coalesce("user"."extraPhone", '')
 	|| 'p' || coalesce("user"."extraPhone2", '')
@@ -332,20 +334,9 @@ const RentController = {
 					req.query,
 					{
 						options: searchOrder && { order: searchOrder },
-						search: ({ q }) => {
-							// q da harf (yoki non-ASCII belgi) bo'lmasa (id, telefon raqam)
-							// ILIKE va LIKE natijasi bir xil, LIKE esa har qatorda lower() chaqirmaydi
-							const caseInsensitive = /[^\x00-\x7f]|[a-z]/i.test(
-								String(q)
-							);
-
-							return Sequelize.where(
-								Sequelize.literal(RENT_SEARCH_STRING_SQL),
-								{
-									[caseInsensitive ? Op.iLike : Op.like]: `%${q}%`,
-								}
-							);
-						},
+						// so'zlar alohida, normallashtirilgan holda qidiriladi (utils/search);
+						// q da harf bo'lmasa (id, telefon) lower/translate chaqirilmaydi
+						search: ({ q }) => searchWhere(q, RENT_SEARCH_STRING_SQL),
 					},
 					Rent,
 					(q) => [

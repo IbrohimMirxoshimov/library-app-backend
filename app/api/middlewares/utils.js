@@ -1,4 +1,5 @@
-const { Op, Sequelize } = require("sequelize");
+const { Op } = require("sequelize");
+const { searchWhere, searchRankOrder } = require("../../utils/search");
 
 function getListOptions(
 	{
@@ -31,26 +32,24 @@ function getListOptions(
 	const options = { ...pagination, ...extra?.options };
 
 	let where = [];
+	let searchOrder = null;
 
 	if (q) {
 		if (extra?.search) {
-			where.push(extra.search({ q }));
+			const searchCondition = extra.search({ q });
+			if (searchCondition) where.push(searchCondition);
+			searchOrder = extra.searchOrder?.({ q }) || null;
 		} else {
-			where.push(
-				Sequelize.where(
-					Sequelize.fn(
-						"concat",
-						(Model.rawAttributes[s] &&
-							Sequelize.col(`${Model.name}.${s}`)) ||
-							"",
-						Sequelize.cast(
-							Sequelize.col(`${Model.name}.id`),
-							"varchar"
-						)
-					),
-					{ [Op.iLike]: `%${q}%` }
-				)
+			// "{name} {id}" bo'yicha normallashtirilgan qidiruv (s ustuni bo'lmasa faqat id)
+			const attribute = Model.rawAttributes[s];
+			const column =
+				attribute && `coalesce("${Model.name}"."${attribute.field || s}"::text, '')`;
+			const idSql = `"${Model.name}"."id"::text`;
+			const searchCondition = searchWhere(q, (norm) =>
+				column ? `${norm(column)} || ' ' || ${idSql}` : idSql
 			);
+			if (searchCondition) where.push(searchCondition);
+			searchOrder = column ? searchRankOrder(q, [column]) : null;
 		}
 	}
 
@@ -84,6 +83,11 @@ function getListOptions(
 
 	if (getInclude) {
 		options.include = getInclude(q);
+	}
+
+	// qidiruvda eng mos (nomi so'rov bilan boshlanadigan) natijalar birinchi
+	if (searchOrder && options.order) {
+		options.order = [searchOrder, ...options.order];
 	}
 
 	return options;
