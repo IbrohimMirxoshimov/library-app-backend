@@ -5,7 +5,6 @@ const UserStatus = require("../constants/UserStatus");
 const db = require("../database/models");
 const { Rent, Stock, User, Book, Comment, Location } = db;
 const { sendMessageFromTelegramBot } = require("../services/Notifications");
-const { report } = require("../services/RentServices");
 const { getLink, setLibraryFields } = require("../services/ReaderLibrary");
 const StatServices = require("../services/StatServices");
 const HttpError = require("../utils/HttpError");
@@ -15,7 +14,6 @@ const {
 	PhoneVerificationReason,
 } = require("../utils/phoneVerification");
 const {
-	getReportText,
 	getRentDurationInDays,
 	getReturningDateIfIsNotWorkingDay,
 } = require("../utils/rent");
@@ -371,20 +369,6 @@ const RentController = {
 					totalCount: count,
 				})
 				.status(200);
-		} catch (e) {
-			next(e);
-		}
-	},
-	report: () => async (req, res, next) => {
-		try {
-			let query = req.query;
-			let r = await report(req.user.libraryId);
-
-			if (query.format === "text") {
-				return res.send(getReportText(r)).status(200);
-			}
-
-			return res.json(rows).status(201);
 		} catch (e) {
 			next(e);
 		}

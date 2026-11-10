@@ -21,7 +21,6 @@ module.exports = (app) => {
 	app.use("/rents", middlewares.isAuth, isLibrarian, route);
 
 	route.get("/", RentController.getList());
-	route.get("/report", RentController.report());
 	route.get(
 		"/active",
 		celebrate({
