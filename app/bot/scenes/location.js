@@ -1,7 +1,7 @@
 const { Scenes, Markup } = require("telegraf");
 const User = require("../../database/models/User");
 const { cache } = require("../cache");
-const { mainSend, authUser } = require("../utils/helpers");
+const { mainSend, authUser, editOrReply } = require("../utils/helpers");
 const { BaseScene } = Scenes;
 
 const location = new BaseScene("location");
@@ -19,7 +19,7 @@ location
 
 		if (ctx.callbackQuery) {
 			ctx.answerCbQuery();
-			return ctx.editMessageText(t, m);
+			return editOrReply(ctx, t, m);
 		}
 
 		return ctx.reply(t, m);

@@ -5,6 +5,7 @@ const { User } = require("../../database/models");
 const { getLink } = require("../../services/ReaderLibrary");
 const { getUserLocationId } = require("../cache");
 const { backButton } = require("../utils/keyboards");
+const { editOrReply } = require("../utils/helpers");
 const { BaseScene } = Scenes;
 const UserStatusTrasnlate = {
 	[UserStatus.active]: "Faol",
@@ -54,7 +55,7 @@ ${balance ? `💳 Balans: <b>${balance} so'm</b>` : ""}`;
 
 	if (ctx.callbackQuery) {
 		ctx.answerCbQuery();
-		return ctx.editMessageText(text, {
+		return editOrReply(ctx, text, {
 			parse_mode: "HTML",
 			reply_markup: keyboard.reply_markup,
 		});

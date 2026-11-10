@@ -14,6 +14,16 @@ function mainSend(ctx) {
 	return ctx.reply("Kerakli buyruqni tanlashingiz mumkin!", searchMarkup(ctx));
 }
 
+// callback kelgan xabar matnli bo'lsa tahrirlaydi. rasmli (kitob) xabarni matnga
+// aylantirib bo'lmaydi - unda yangi xabar yuboriladi
+function editOrReply(ctx, text, extra) {
+	if (ctx.callbackQuery?.message?.text) {
+		return ctx.editMessageText(text, extra);
+	}
+
+	return ctx.reply(text, extra);
+}
+
 function getById(list, id) {
 	return list.find((i) => i.id === id);
 }
@@ -89,6 +99,7 @@ module.exports = {
 	getDeepLink: getDeepLink,
 	getLocations: getLocations,
 	mainSend: mainSend,
+	editOrReply: editOrReply,
 	sendHelp: sendHelp,
 	getById: getById,
 	successFullRegistration: successFullRegistration,

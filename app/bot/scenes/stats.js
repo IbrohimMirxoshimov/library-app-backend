@@ -3,7 +3,7 @@ const texts = require("../../constants/texts");
 const StatServices = require("../../services/StatServices");
 const { backMarkup } = require("../utils/keyboards");
 const { getUserLocation } = require("../cache");
-const { escapeHtml } = require("../utils/helpers");
+const { escapeHtml, editOrReply } = require("../utils/helpers");
 const { BaseScene } = Scenes;
 
 const stats = new BaseScene("stats");
@@ -52,7 +52,7 @@ stats.enter(async (ctx) => {
 
 	if (ctx.callbackQuery) {
 		ctx.answerCbQuery();
-		return ctx.editMessageText(text, {
+		return editOrReply(ctx, text, {
 			reply_markup: backMarkup().reply_markup,
 			parse_mode: "HTML",
 		});

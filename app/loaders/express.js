@@ -7,6 +7,10 @@ const config = require("../config");
 const path = require("path");
 const { isCelebrateError } = require("celebrate");
 const webhook = require("../api/routes/webhook");
+const {
+	formatError,
+	sequelizeValidationMessage,
+} = require("../utils/errors");
 
 module.exports = (app) => {
 	// statics
@@ -38,12 +42,10 @@ module.exports = (app) => {
 
 	app.use((err, req, res, next) => {
 		if (isCelebrateError(err)) {
-			console.log(err);
-			const {
-				details: [{ message }],
-			} = err.details.get("body"); // 'details' is a Map()
+			// 'details' is a Map(): body, query, params ...
+			const [segment] = err.details.values();
 			return res.status(400).send({
-				message: message,
+				message: segment?.details?.[0]?.message || "Noto'g'ri so'rov",
 			});
 		}
 
@@ -65,9 +67,24 @@ module.exports = (app) => {
 	});
 
 	app.use((err, req, res, next) => {
-		// console.error(err);
-		res.status(err.status || 500).json({
-			message: err.message,
+		const validationMessage = sequelizeValidationMessage(err);
+		if (validationMessage) {
+			return res.status(400).json({ message: validationMessage });
+		}
+
+		console.error(
+			"API 500",
+			req.method,
+			req.originalUrl,
+			"user:",
+			req.user?.id,
+			"\n" + formatError(err)
+		);
+
+		// baza xatosining matni (ustun, so'rov) foydalanuvchiga ko'rsatilmaydi
+		const isDbError = String(err.name || "").startsWith("Sequelize");
+		res.status(500).json({
+			message: isDbError ? "Serverda xatolik yuz berdi" : err.message,
 		});
 	});
 };

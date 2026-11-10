@@ -2,7 +2,7 @@ const { Scenes, Markup } = require("telegraf");
 const { checkPhoneScene, loginScene } = require(".");
 const texts = require("../../constants/texts");
 const auth = require("../../services/auth");
-const { mainSend } = require("../utils/helpers");
+const { mainSend, editOrReply } = require("../utils/helpers");
 const { backMarkup, backButton } = require("../utils/keyboards");
 const { BaseScene } = Scenes;
 
@@ -18,7 +18,7 @@ CheckPhone.start((ctx) => {
 	// 	return next();
 	// })
 	.enter(async (ctx) => {
-		return ctx.editMessageText(texts.send_phone_registred, backMarkup());
+		return editOrReply(ctx, texts.send_phone_registred, backMarkup());
 	})
 	.hears(/\d{9}/, async (ctx) => {
 		let [phone] = ctx.match;

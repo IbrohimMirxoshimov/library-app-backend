@@ -1,6 +1,15 @@
 const { Op } = require("sequelize");
 const { searchWhere, searchRankOrder } = require("../../utils/search");
 
+const MAX_PAGE_SIZE = 1000;
+
+// Model berilsa - faqat uning ustunlari, aks holda oddiy ustun nomi
+function isSortableColumn(Model, column) {
+	if (typeof column !== "string") return false;
+	if (Model) return Boolean(Model.rawAttributes[column]);
+	return /^[A-Za-z_][A-Za-z0-9_]*$/.test(column);
+}
+
 function getListOptions(
 	{
 		size = 10,
@@ -17,6 +26,14 @@ function getListOptions(
 	getInclude,
 	customWhere
 ) {
+	// so'rov parametrlari tekshiriladi: noto'g'ri qiymat baza xatosiga (500) olib kelmasin
+	page = Math.max(parseInt(page) || 1, 1);
+	size = Math.min(Math.max(parseInt(size) || 10, 1), MAX_PAGE_SIZE);
+	order = String(order).toUpperCase() === "ASC" ? "ASC" : "DESC";
+	if (!isSortableColumn(Model, sort)) {
+		sort = isSortableColumn(Model, "updatedAt") ? "updatedAt" : "id";
+	}
+
 	// qs turns arrays with more than 20 items into objects ({ "0": .., "21": .. })
 	if (id && !Array.isArray(id)) {
 		id = typeof id === "object" ? Object.values(id) : String(id).split(",");

@@ -1,3 +1,4 @@
+const { formatError, isBenignTelegramError } = require("../../utils/errors");
 const { session } = require("telegraf");
 const { DEV_ID } = require("../../config");
 const { inlineQuery } = require("./inline");
@@ -16,8 +17,10 @@ async function loadBot() {
 	const bot = require("./bot");
 
 	bot.catch((e) => {
-		console.error("ERROR", e);
-		bot.telegram.sendMessage(DEV_ID, e.stack || e.message).catch((e) => {});
+		if (isBenignTelegramError(e)) return;
+		const text = formatError(e);
+		console.error("ERROR", text);
+		bot.telegram.sendMessage(DEV_ID, text.slice(0, 4000)).catch(() => {});
 	});
 
 	await updateLocations();
